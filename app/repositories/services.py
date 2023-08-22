@@ -46,11 +46,13 @@ class UserService(Service):
             return Error(field_name='email', exception='User with current email already exists')
         return user
 
-    async def get_by_filter(self, **kwargs):
+    async def get_by_filter(self, option=None, **kwargs):
+        if option:
+            return await self.repository.get_with_options(option, **kwargs)
         return await self.repository.get(**kwargs)
 
-    async def delete(self, *args, **kwargs):
-        raise NotImplementedError()
+    async def delete(self, obj):
+        await self.repository.delete(obj)
 
     async def update(self, *args, **kwargs):
         raise NotImplementedError()
@@ -89,16 +91,15 @@ class OfferService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def select(self, *args, **kwargs):
-        return await self.repository.select(*args, **kwargs)
+    async def select(self, *args):
+        return await self.repository.select(*args)
 
     async def add(self, **kwargs):
         res = await self.repository.add(**kwargs)
         return res
 
-    async def get_by_filter(self, **kwargs):
-        res = await self.repository.get(**kwargs)
-        return res
+    async def get_by_filter(self, *args):
+        return await self.repository.get(*args)
 
     async def delete(self, *args, **kwargs):
         raise NotImplementedError()
@@ -152,4 +153,26 @@ class UserAccountService(Service):
         raise NotImplementedError()
 
 
+class ExecutorService(Service):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    async def add(self, user_id, offer_id):
+        res = await self.repository.add(
+            user_id=user_id,
+            offer_id=offer_id,
+        )
+        return res
+
+    async def delete(self, obj):
+        await self.repository.delete(obj)
+
+    async def get_by_filter(self, **kwargs):
+        return await self.repository.get(**kwargs)
+
+    async def select(self, *args, **kwargs):
+        raise NotImplemented()
+
+    async def update(self, obj_id, **kwargs):
+        res = await self.repository.update(obj_id, **kwargs)
+        return res

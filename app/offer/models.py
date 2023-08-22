@@ -2,6 +2,8 @@ from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
+
+from auth.models import User
 from core.database import Base
 from datetime import datetime
 from uuid import uuid4
@@ -45,7 +47,6 @@ class Offer(Base):
     s3_filename: Mapped[str] = mapped_column(sqlalchemy.String(256), unique=True, nullable=True)
     category_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('categories.id'))
     type_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('offer_type.id'))
-    cost: Mapped[float] = mapped_column(sqlalchemy.Float(precision=2), nullable=True)
     is_anonymous: Mapped[bool] = mapped_column(sqlalchemy.Boolean)
     is_premium: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(sqlalchemy.DateTime, default=datetime.utcnow)
@@ -54,3 +55,16 @@ class Offer(Base):
     status: Mapped['OfferStatus'] = relationship('OfferStatus', back_populates='status_offers')
     category: Mapped['Category'] = relationship('Category', back_populates='category_offers')
     type: Mapped['OfferType'] = relationship('OfferType', back_populates='type_offers')
+    executors: Mapped[List['Executor']] = relationship('Executor', back_populates='offer')
+
+
+class Executor(Base):
+    __tablename__ = 'executors'
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
+    offer_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('offers.id', ondelete='CASCADE'))
+    is_approved: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
+
+    user: Mapped['User'] = relationship('User', back_populates='offer_executor')
+    offer: Mapped['Offer'] = relationship('Offer', back_populates='executors')

@@ -41,9 +41,9 @@ class DatabaseRepository(BaseRepository):
             return obj
 
     @classmethod
-    async def get(cls, load_option=None, **kwargs):
+    async def get(cls, *args):
         async with async_session() as session:
-            statement = select(cls._model).filter_by(**kwargs)
+            statement = select(cls._model).where(*args)
             res = await session.scalar(statement)
             return res
 
@@ -62,19 +62,15 @@ class DatabaseRepository(BaseRepository):
             return res
 
     @classmethod
-    async def select(cls, *join_models, **kwargs):
+    async def select(cls, *args):
         async with async_session() as session:
-            statement = select(cls._model)
-            if join_models:
-                for model in join_models:
-                    statement = statement.join(model)
-            statement = statement.filter_by(**kwargs)
+            statement = select(cls._model).where(*args)
             res = await session.execute(statement)
             return [x[0] for x in res.fetchall()]
 
     @classmethod
-    async def get_with_options(cls, load_option=None, **kwargs):
+    async def get_with_options(cls, load_option=None, *args):
         async with async_session() as session:
-            statement = select(cls._model).filter_by(**kwargs).options(load_option)
+            statement = select(cls._model).where(*args).options(load_option)
             res = await session.scalar(statement)
             return res

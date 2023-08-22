@@ -16,6 +16,7 @@ class User(Base):
 
     refresh_session = relationship('RefreshSession', back_populates='user')
     personal_data = relationship('UserAccount', backref='personal_data')
+    offer_executor = relationship('Executor', back_populates='user')
 
     def __repr__(self):
         return f'User(id={self.id}, email={self.email})'

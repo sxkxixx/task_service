@@ -4,7 +4,7 @@ from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, auth_dependency
 from repositories.services import Service
 from sqlalchemy.orm import selectinload
-from auth.models import RefreshSession
+from auth.models import RefreshSession, UserAccount
 from auth.models import User
 from datetime import datetime
 from typing import Annotated
@@ -29,7 +29,7 @@ async def get_token(
         _user_service: Service = Depends(user_service),
         _session_service: Service = Depends(session_service)
 ):
-    user: User = await _user_service.get_by_filter(email=_user.email)
+    user: User = await _user_service.get_by_filter(User.email == _user.email)
     if not user:
         raise HTTPException(status_code=404, detail='User does not found by this email')
     if not Hasher.is_correct_password(_user.password, user.password):
@@ -37,7 +37,7 @@ async def get_token(
     access, refresh = Token.get_tokens_pair(user)
     db_token = await _session_service.add(user, user_agent, refresh)
     response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth')
-    return {'token_type': 'Bearer', 'access_token': access}
+    return access
 
 
 @auth.post('/token/refresh', tags=['AUTH'])
@@ -47,8 +47,10 @@ async def _refresh_token(
         refresh_token: Annotated[str, Cookie()] = None,
         _session_service: Service = Depends(session_service)
 ):
-    refresh_session: RefreshSession = await _session_service.get_by_filter(selectinload(RefreshSession.user),
-                                                                           id=refresh_token, user_agent=user_agent)
+    refresh_session: RefreshSession = await _session_service.get_by_filter(
+        selectinload(RefreshSession.user),
+        RefreshSession.id == refresh_token,
+        RefreshSession.user_agent == user_agent)
     if not refresh_session:
         return Response("Redirect to /login page", status_code=302)
     if refresh_session.expires_in < datetime.utcnow():
@@ -59,7 +61,7 @@ async def _refresh_token(
     access, refresh = Token.get_tokens_pair(user)
     db_token = await _session_service.add(user, user_agent, refresh)
     response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth')
-    return {'token_type': 'Bearer', 'access_token': access}
+    return access
 
 
 @auth.post('/logout', tags=['AUTH'])
@@ -69,7 +71,11 @@ async def logout(
         user: User = Depends(auth_dependency),
         _session_service: Service = Depends(session_service)
 ):
-    session = await _session_service.get_by_filter(user_id=user.id, user_agent=user_agent, id=refresh_token)
+    session = await _session_service.get_by_filter(
+        RefreshSession.user_id == user.id,
+        RefreshSession.user_agent == user_agent,
+        RefreshSession.id == refresh_token
+    )
     _session_service.delete(session)
     return {'user': user.id, 'status': 'logged out'}
 
@@ -80,7 +86,7 @@ async def append_user_info(
         _user_account_service: Service = Depends(user_account_service),
         user: User = Depends(auth_dependency),
 ):
-    user_info = await _user_account_service.get_by_filter(id=user.id)
+    user_info = await _user_account_service.get_by_filter(UserAccount.id == user.id)
     if user_info:
         return Response(f'{user.email}\'s account info already exists', status_code=400)
     user_info = await _user_account_service.add(id=user.id, **info.model_dump())
@@ -96,3 +102,11 @@ async def update_user_info(
     user_info = await _user_account_service.update(user.id, **info.model_dump())
     return user_info
 
+
+@auth.delete('/delete_user', tags=['USER'])
+async def delete_user(
+        user: User = Depends(auth_dependency),
+        _user_service: Service = Depends(user_service)
+):
+    await _user_service.delete(user)
+    return {'id': user.id, 'status': 'deleted'}

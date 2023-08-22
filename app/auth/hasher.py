@@ -1,3 +1,4 @@
+from auth.models import User
 from core.config import ACCESS_TOKEN_TTL_MINUTES, REFRESH_TOKEN_TTL_DAYS
 from repositories.dependencies import user_service
 from fastapi import Header, Response, Depends, HTTPException
@@ -72,7 +73,7 @@ async def auth_dependency(authorization: Annotated[str, Header()] = None, servic
     expires_in = datetime.fromtimestamp(float(payload.get('exp')))
     if expires_in < datetime.utcnow():
         raise HTTPException(status_code=401, detail='Access token has expired')
-    user = await service.get_by_filter(email=payload.get('email'))
+    user = await service.get_by_filter(User.email == payload.get('email'))
     if not user:
         return Response('Unauthorized', status_code=401)
     return user

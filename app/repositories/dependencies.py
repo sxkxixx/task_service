@@ -3,6 +3,7 @@ from repositories.services import (
     SessionService,
     OfferService,
     UserAccountService,
+    ExecutorService,
     ReadOnlyService)
 from repositories.repositories import (
     UserRepository,
@@ -10,7 +11,8 @@ from repositories.repositories import (
     OfferRepository,
     CategoryRepository,
     OfferTypeRepository,
-    UserAccountRepository
+    UserAccountRepository,
+    ExecutorRepository
 )
 
 
@@ -36,3 +38,7 @@ def offer_type_service() -> ReadOnlyService:
 
 def user_account_service() -> UserAccountService:
     return UserAccountService(UserAccountRepository)
+
+
+def executor_service() -> ExecutorService:
+    return ExecutorService(ExecutorRepository)
