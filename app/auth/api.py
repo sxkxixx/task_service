@@ -53,7 +53,7 @@ async def _refresh_token(
         RefreshSession.user_agent == user_agent)
     if not refresh_session:
         return Response("Redirect to /login page", status_code=302)
-    if refresh_session.expires_in < datetime.utcnow():
+    if datetime.fromtimestamp(refresh_session.expires_in) < datetime.utcnow():
         _session_service.delete(refresh_session)
         return Response("Redirect to /login page", status_code=302)
     user = refresh_session.user

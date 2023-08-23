@@ -1,3 +1,4 @@
+from typing import List
 from repositories.dependencies import offer_service, category_service, offer_type_service, executor_service
 from offer.schemas import OfferSchema, OfferUpdate
 from offer.validators import check_file_signature
@@ -6,8 +7,9 @@ from repositories.s3_service import S3Service
 from repositories.services import Service
 from auth.hasher import auth_dependency
 from fastapi import Depends, Response
-from offer.models import Offer, Executor
+from offer.models import Offer, Executor, OfferType, Category
 from auth.models import User
+from sqlalchemy import or_
 
 offers_api = APIRouter(prefix='/api/v1/offer', tags=['OFFER'])
 s3_service = S3Service()
@@ -50,12 +52,24 @@ async def update_offer(
 
 @offers_api.get('')
 async def get_offers(
-        offer_type: str,
+        offer_type: List[str] = None,
+        category: List[str] = None,
         skip: int = 0,
         limit: int = 20,
         _offer_service: Service = Depends(offer_service)
 ):
-    res = await _offer_service.select()
+    join_models, filters = [], []
+
+    if offer_type:
+        join_models.append(OfferType)
+        for _type in offer_type:
+            filters.append(OfferType.type == _type)
+    if category:
+        join_models.append(Category)
+        for _category in category:
+            filters.append(Category.name == _category)
+
+    res = await _offer_service.select(join_models, or_(*filters))
     return res[skip: skip + limit]
 
 

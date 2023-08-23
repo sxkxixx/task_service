@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from typing import List
+
 from core.database import async_session, Base
 from sqlalchemy import select, update
 
@@ -26,6 +28,9 @@ class BaseRepository(ABC):
 
     @abstractmethod
     async def get_with_options(self, *args, **kwargs):
+        pass
+
+    def select_join(self, param):
         pass
 
 
@@ -74,3 +79,14 @@ class DatabaseRepository(BaseRepository):
             statement = select(cls._model).where(*args).options(load_option)
             res = await session.scalar(statement)
             return res
+
+    @classmethod
+    async def select_join(cls, join_models: List, *filters):
+        async with async_session() as session:
+            statement = select(cls._model)
+            for model in join_models:
+                statement = statement.join(model)
+            statement = statement.where(*filters)
+            res = await session.execute(statement)
+        return [x[0] for x in res.fetchall()]
+

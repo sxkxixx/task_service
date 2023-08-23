@@ -72,10 +72,10 @@ class SessionService(Service):
         )
         return token
 
-    async def get_by_filter(self, option=None, **kwargs):
+    async def get_by_filter(self, option=None, *args):
         if option:
-            return await self.repository.get_with_options(option, **kwargs)
-        return await self.repository.get(**kwargs)
+            return await self.repository.get_with_options(option, *args)
+        return await self.repository.get(*args)
 
     async def delete(self, refresh_session):
         await self.repository.delete(refresh_session)
@@ -92,7 +92,7 @@ class OfferService(Service):
         super().__init__(*args, **kwargs)
 
     async def select(self, *args):
-        return await self.repository.select(*args)
+        return await self.repository.select_join(*args)
 
     async def add(self, **kwargs):
         res = await self.repository.add(**kwargs)
