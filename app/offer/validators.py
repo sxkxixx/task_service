@@ -9,7 +9,7 @@ SIGNATURES = {
 }
 
 
-def check_file_signature(file: UploadFile = File(...)):
+def is_valid_file_signature(file: UploadFile = File(...)):
     hex_bytes = ' '.join(['{:02X}'.format(byte) for byte in file.file.read(8)])
     ct = file.content_type
     extension = ct[ct.find('/') + 1:]

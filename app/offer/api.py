@@ -1,15 +1,15 @@
-from typing import List
 from repositories.dependencies import offer_service, category_service, offer_type_service, executor_service
-from offer.schemas import OfferSchema, OfferUpdate
-from offer.validators import check_file_signature
+from offer.models import Offer, Executor, OfferType, Category
 from fastapi import APIRouter, UploadFile, File, Body
+from offer.validators import is_valid_file_signature
+from offer.schemas import OfferSchema, OfferUpdate
 from repositories.s3_service import S3Service
 from repositories.services import Service
 from auth.hasher import auth_dependency
 from fastapi import Depends, Response
-from offer.models import Offer, Executor, OfferType, Category
 from auth.models import User
 from sqlalchemy import or_
+from typing import List
 
 offers_api = APIRouter(prefix='/api/v1/offer', tags=['OFFER'])
 s3_service = S3Service()
@@ -50,6 +50,21 @@ async def update_offer(
     return offer
 
 
+@offers_api.delete('/{offer_id}')
+async def delete_offer(
+        offer_id: str,
+        user: User = Depends(auth_dependency),
+        _offer_service: Service = Depends(offer_service)
+):
+    offer = await _offer_service.get_by_filter(Offer.id == offer_id)
+    if not offer:
+        return Response('Not found', status_code=404)
+    if offer.user_id != user.id:
+        return Response('Forbidden', status_code=403)
+    await _offer_service.delete(offer)
+    return {'id': offer.id, 'status': 'deleted'}
+
+
 @offers_api.get('')
 async def get_offers(
         offer_type: List[str] = None,
@@ -80,7 +95,7 @@ async def append_file(
         user: User = Depends(auth_dependency),
         _offer_service: Service = Depends(offer_service)
 ):
-    if not check_file_signature(file):
+    if not is_valid_file_signature(file):
         return Response('Bad file signature', status_code=400)
     offer = await _offer_service.get_by_filter(Offer.id == offer_id)
     if not offer:

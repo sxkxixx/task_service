@@ -101,8 +101,8 @@ class OfferService(Service):
     async def get_by_filter(self, *args):
         return await self.repository.get(*args)
 
-    async def delete(self, *args, **kwargs):
-        raise NotImplementedError()
+    async def delete(self, obj):
+        await self.repository.delete(obj)
 
     async def update(self, obj_id, **updating_fields):
         res = await self.repository.update(obj_id, **updating_fields)
