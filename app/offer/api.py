@@ -5,7 +5,7 @@ from offer.validators import is_valid_file_signature
 from offer.schemas import OfferSchema, OfferUpdate
 from repositories.s3_service import S3Service
 from repositories.services import Service
-from auth.hasher import auth_dependency
+from auth.hasher import AuthDependency
 from fastapi import Depends, Response
 from auth.models import User
 from sqlalchemy import or_
@@ -21,7 +21,7 @@ async def create_offer(
         _offer_session: Service = Depends(offer_service),
         _category_service: Service = Depends(category_service),
         _offer_type_service: Service = Depends(offer_type_service),
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
 ):
     offer = await _offer_session.add(user_id=user.id, **_offer.model_dump())
     return offer
@@ -30,11 +30,13 @@ async def create_offer(
 @offers_api.get('/{offer_id}')
 async def get_offer_by_id(
         offer_id: str,
-        _offer_session: Service = Depends(offer_service)
+        _offer_session: Service = Depends(offer_service),
+        user: User | None = Depends(AuthDependency(is_strict=False))
 ):
-    offer = await _offer_session.get_by_filter(Offer.id == offer_id)
+    offer = await _offer_session.lazyload_get(Offer.executors, id=offer_id)
     if not offer:
         return Response('Not found', status_code=404)
+
     return offer
 
 
@@ -43,6 +45,7 @@ async def update_offer(
         offer_id: str,
         _offer_schema: OfferUpdate,
         _offer_service: Service = Depends(offer_service),
+        user: User = Depends(AuthDependency())
 ):
     offer = await _offer_service.update(offer_id, **_offer_schema.model_dump())
     if not offer:
@@ -53,7 +56,7 @@ async def update_offer(
 @offers_api.delete('/{offer_id}')
 async def delete_offer(
         offer_id: str,
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _offer_service: Service = Depends(offer_service)
 ):
     offer = await _offer_service.get_by_filter(Offer.id == offer_id)
@@ -92,7 +95,7 @@ async def get_offers(
 async def append_file(
         offer_id: str,
         file: UploadFile = File(...),
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _offer_service: Service = Depends(offer_service)
 ):
     if not is_valid_file_signature(file):
@@ -113,7 +116,7 @@ async def append_file(
 @offers_api.post('/{offer_id}/executor/create')
 async def create_executor(
         offer_id: str,
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _executor_service: Service = Depends(executor_service),
         _offer_service: Service = Depends(offer_service)
 ):
@@ -130,7 +133,7 @@ async def create_executor(
 async def delete_executor(
         offer_id: str,
         executor_id: str,
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _executor_service: Service = Depends(executor_service),
 ):
     executor = await _executor_service.get_by_filter(
@@ -148,7 +151,7 @@ async def is_approved_executor(
         offer_id: str,
         executor_id: str,
         is_approved: bool = Body(...),
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _executor_service: Service = Depends(executor_service),
         _offer_service: Service = Depends(offer_service)
 ):

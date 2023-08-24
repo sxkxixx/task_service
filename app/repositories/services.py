@@ -31,6 +31,10 @@ class Service(ABC):
     async def update(self, *args, **kwargs):
         pass
 
+    @abstractmethod
+    def lazyload_get(self, *args, **kwargs):
+        pass
+
 
 class UserService(Service):
     def __init__(self, *args, **kwargs):
@@ -56,6 +60,9 @@ class UserService(Service):
 
     async def update(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def lazyload_get(self, *args, **kwargs):
+        pass
 
 
 class SessionService(Service):
@@ -86,6 +93,9 @@ class SessionService(Service):
     async def select(self, *args, **kwargs):
         raise NotImplementedError()
 
+    def lazyload_get(self, *args, **kwargs):
+        pass
+
 
 class OfferService(Service):
     def __init__(self, *args, **kwargs):
@@ -106,6 +116,10 @@ class OfferService(Service):
 
     async def update(self, obj_id, **updating_fields):
         res = await self.repository.update(obj_id, **updating_fields)
+        return res
+
+    async def lazyload_get(self, *load_fields, **filters):
+        res = await self.repository.lazyload_get(*load_fields, **filters)
         return res
 
 
@@ -129,6 +143,9 @@ class ReadOnlyService(Service):
     async def select(self, *args, **kwargs):
         raise NotImplementedError()
 
+    def lazyload_get(self, *args, **kwargs):
+        pass
+
 
 class UserAccountService(Service):
     def __init__(self, *args, **kwargs):
@@ -151,6 +168,9 @@ class UserAccountService(Service):
 
     async def select(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def lazyload_get(self, *args, **kwargs):
+        pass
 
 
 class ExecutorService(Service):
@@ -176,3 +196,6 @@ class ExecutorService(Service):
     async def update(self, obj_id, **kwargs):
         res = await self.repository.update(obj_id, **kwargs)
         return res
+
+    def lazyload_get(self, *args, **kwargs):
+        pass

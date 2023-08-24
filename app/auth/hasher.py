@@ -44,7 +44,7 @@ class Token:
         return payload
 
 
-# TODO: не работает
+# TODO: не работает, да и не нужно
 def auth_required(func, service: Service = Depends(user_service)):
     @wraps(func)
     async def wrapper(authorization: Annotated[str, Header()] = None, *args, **kwargs):
@@ -60,12 +60,14 @@ def auth_required(func, service: Service = Depends(user_service)):
             return Response("Unauthorized", status_code=401)
         func_result = await func(*args, **kwargs)
         return func_result
+
     return wrapper
 
 
+# TODO: Работает, но написал классовую зависимость
 async def auth_dependency(authorization: Annotated[str, Header()] = None, service: Service = Depends(user_service)):
     if not authorization:
-        raise HTTPException(status_code=401, detail='No access token token')
+        raise HTTPException(status_code=401, detail='No access token')
     try:
         payload = Token.get_token_payload(authorization)
     except JWTError as e:
@@ -77,3 +79,35 @@ async def auth_dependency(authorization: Annotated[str, Header()] = None, servic
     if not user:
         return Response('Unauthorized', status_code=401)
     return user
+
+
+class AuthDependency:
+    def __init__(self, is_strict=True):
+        self.is_strict = is_strict
+        self.service: Service = user_service()
+
+    async def __call__(self, authorization: Annotated[str, Header()] = None):
+        if self.is_strict:
+            return await self.__strict_auth(authorization)
+        return await self.__soft_auth(authorization)
+
+    async def __strict_auth(self, authorization: str):
+        if not authorization:
+            raise HTTPException(status_code=401, detail='No access token')
+        try:
+            payload = Token.get_token_payload(authorization)
+        except JWTError as e:
+            raise HTTPException(status_code=401, detail=e.__str__())
+        expires_in = datetime.fromtimestamp(float(payload.get('exp')))
+        if expires_in < datetime.utcnow():
+            raise HTTPException(status_code=401, detail='Access token has expired')
+        user = await self.service.get_by_filter(User.email == payload.get('email'))
+        if not user:
+            return Response('Unauthorized', status_code=401)
+        return user
+
+    async def __soft_auth(self, authorization: str):
+        try:
+            return await self.__strict_auth(authorization)
+        except HTTPException:
+            return None

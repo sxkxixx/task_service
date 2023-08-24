@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from sqlalchemy.orm import lazyload
+
 from core.database import async_session, Base
 from sqlalchemy import select, update
 
@@ -30,7 +32,12 @@ class BaseRepository(ABC):
     async def get_with_options(self, *args, **kwargs):
         pass
 
-    def select_join(self, param):
+    @abstractmethod
+    def select_join(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def lazyload_get(self, *args, **kwargs):
         pass
 
 
@@ -90,3 +97,9 @@ class DatabaseRepository(BaseRepository):
             res = await session.execute(statement)
         return [x[0] for x in res.fetchall()]
 
+    @classmethod
+    async def lazyload_get(cls, *load_fields, **filters):
+        async with async_session() as session:
+            statement = select(cls._model).filter_by(**filters).options(lazyload(*load_fields))
+            res = await session.scalar(statement)
+        return res

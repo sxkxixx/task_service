@@ -1,7 +1,7 @@
 from repositories.dependencies import user_service, session_service, user_account_service
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
-from auth.hasher import Token, Hasher, auth_dependency
+from auth.hasher import Token, Hasher, AuthDependency
 from repositories.services import Service
 from sqlalchemy.orm import selectinload
 from auth.models import RefreshSession, UserAccount
@@ -68,7 +68,7 @@ async def _refresh_token(
 async def logout(
         user_agent: Annotated[str, Header()],
         refresh_token: Annotated[str, Cookie()] = None,
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _session_service: Service = Depends(session_service)
 ):
     session = await _session_service.get_by_filter(
@@ -84,7 +84,7 @@ async def logout(
 async def append_user_info(
         info: UserAccountInfo,
         _user_account_service: Service = Depends(user_account_service),
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
 ):
     user_info = await _user_account_service.get_by_filter(UserAccount.id == user.id)
     if user_info:
@@ -97,7 +97,7 @@ async def append_user_info(
 async def update_user_info(
         info: UserAccountInfo,
         _user_account_service: Service = Depends(user_account_service),
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
 ):
     user_info = await _user_account_service.update(user.id, **info.model_dump())
     return user_info
@@ -105,8 +105,9 @@ async def update_user_info(
 
 @auth.delete('/delete_user', tags=['USER'])
 async def delete_user(
-        user: User = Depends(auth_dependency),
+        user: User = Depends(AuthDependency()),
         _user_service: Service = Depends(user_service)
 ):
     await _user_service.delete(user)
     return {'id': user.id, 'status': 'deleted'}
+
