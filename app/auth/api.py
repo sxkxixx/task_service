@@ -2,11 +2,11 @@ from repositories.dependencies import user_service, session_service, user_accoun
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, AuthDependency
+from auth.models import RefreshSession, UserAccount
 from repositories.services import Service
 from sqlalchemy.orm import selectinload
-from auth.models import RefreshSession, UserAccount
-from auth.models import User
 from datetime import datetime
+from auth.models import User
 from typing import Annotated
 
 auth = APIRouter(prefix='/api/v1/auth')
@@ -29,7 +29,7 @@ async def get_token(
         _user_service: Service = Depends(user_service),
         _session_service: Service = Depends(session_service)
 ):
-    user: User = await _user_service.get_by_filter(User.email == _user.email)
+    user: User = await _user_service.get_by_filter(None, User.email == _user.email)
     if not user:
         raise HTTPException(status_code=404, detail='User does not found by this email')
     if not Hasher.is_correct_password(_user.password, user.password):

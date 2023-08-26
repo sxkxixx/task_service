@@ -50,10 +50,10 @@ class UserService(Service):
             return Error(field_name='email', exception='User with current email already exists')
         return user
 
-    async def get_by_filter(self, option=None, **kwargs):
+    async def get_by_filter(self, option=None, *args):
         if option:
-            return await self.repository.get_with_options(option, **kwargs)
-        return await self.repository.get(**kwargs)
+            return await self.repository.get_with_options(option, *args)
+        return await self.repository.get(*args)
 
     async def delete(self, obj):
         await self.repository.delete(obj)
@@ -197,5 +197,6 @@ class ExecutorService(Service):
         res = await self.repository.update(obj_id, **kwargs)
         return res
 
-    def lazyload_get(self, *args, **kwargs):
-        pass
+    async def lazyload_get(self, *args, **kwargs):
+        res = await self.repository.lazyload_get(*args, **kwargs)
+        return res

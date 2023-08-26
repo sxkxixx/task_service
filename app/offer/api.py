@@ -124,6 +124,7 @@ async def create_executor(
     if not offer:
         return Response('Not found', status_code=404)
     if offer.user_id == user.id:
+        print(offer.user_id, user.id)
         return Response('Offer\'s owner can\'t be executor of its offer', status_code=400)
     executor = await _executor_service.add(user_id=user.id, offer_id=offer_id)
     return executor
@@ -136,12 +137,13 @@ async def delete_executor(
         user: User = Depends(AuthDependency()),
         _executor_service: Service = Depends(executor_service),
 ):
-    executor = await _executor_service.get_by_filter(
-        Executor.id == executor_id,
-        Executor.offer_id == offer_id,
-        Executor.user_id == user.id)
+    executor = await _executor_service.lazyload_get(
+        Executor.offer,
+        id=executor_id, offer_id=offer_id)
     if not executor:
         return Response('Not found', status_code=404)
+    if executor.user_id != user.id or executor.offer.user_id != user.id:
+        return Response('Forbidden', status_code=403)
     await _executor_service.delete(executor)
     return {'id': executor.id, 'status': 'deleted'}
 

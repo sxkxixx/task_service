@@ -101,7 +101,7 @@ class AuthDependency:
         expires_in = datetime.fromtimestamp(float(payload.get('exp')))
         if expires_in < datetime.utcnow():
             raise HTTPException(status_code=401, detail='Access token has expired')
-        user = await self.service.get_by_filter(User.email == payload.get('email'))
+        user = await self.service.get_by_filter(None, User.email == payload.get('email'))
         if not user:
             return Response('Unauthorized', status_code=401)
         return user
