@@ -3,7 +3,7 @@ from core.config import ACCESS_TOKEN_TTL_MINUTES, REFRESH_TOKEN_TTL_DAYS
 from repositories.dependencies import user_service
 from fastapi import Header, Response, Depends, HTTPException
 from core.config import SECRET_KEY, ALGORITHM
-from repositories.services import Service
+from repositories.services import Service, UserService
 from passlib.context import CryptContext
 from datetime import timedelta, datetime
 from typing import Literal, Annotated
@@ -38,6 +38,10 @@ class Token:
             cls._get_encode_token(user, 'refresh_token', timedelta(days=REFRESH_TOKEN_TTL_DAYS))
         )
 
+    @classmethod
+    def get_access_token(cls, user):
+        return cls._get_encode_token(user, 'access_token', timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES))
+
     @staticmethod
     def get_token_payload(token):
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
@@ -55,7 +59,7 @@ def auth_required(func, service: Service = Depends(user_service)):
         except JWTError:
             raise HTTPException(status_code=401, detail="Unauthorized")
         email = payload.get('email')
-        user = await service.get_by_filter(email=email)
+        user = await service.get_with_options(email=email)
         if not user:
             return Response("Unauthorized", status_code=401)
         func_result = await func(*args, **kwargs)
@@ -75,7 +79,7 @@ async def auth_dependency(authorization: Annotated[str, Header()] = None, servic
     expires_in = datetime.fromtimestamp(float(payload.get('exp')))
     if expires_in < datetime.utcnow():
         raise HTTPException(status_code=401, detail='Access token has expired')
-    user = await service.get_by_filter(User.email == payload.get('email'))
+    user = await service.get_with_options(User.email == payload.get('email'))
     if not user:
         return Response('Unauthorized', status_code=401)
     return user
@@ -84,7 +88,7 @@ async def auth_dependency(authorization: Annotated[str, Header()] = None, servic
 class AuthDependency:
     def __init__(self, is_strict=True):
         self.is_strict = is_strict
-        self.service: Service = user_service()
+        self.service: UserService = user_service()
 
     async def __call__(self, authorization: Annotated[str, Header()] = None):
         if self.is_strict:
@@ -101,7 +105,7 @@ class AuthDependency:
         expires_in = datetime.fromtimestamp(float(payload.get('exp')))
         if expires_in < datetime.utcnow():
             raise HTTPException(status_code=401, detail='Access token has expired')
-        user = await self.service.get_by_filter(None, User.email == payload.get('email'))
+        user = await self.service.get(User.email == payload.get('email'))
         if not user:
             return Response('Unauthorized', status_code=401)
         return user

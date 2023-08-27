@@ -39,7 +39,6 @@ class RefreshSession(Base):
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
     user_agent: Mapped[str] = mapped_column(sqlalchemy.String(200))
-    refresh_token: Mapped[str] = mapped_column(sqlalchemy.String(200))
     expires_in: Mapped[int] = mapped_column(sqlalchemy.BigInteger)
     created_at: Mapped[datetime] = mapped_column(sqlalchemy.DateTime(timezone=True), default=datetime.now)
 

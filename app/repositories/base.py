@@ -66,9 +66,9 @@ class DatabaseRepository(BaseRepository):
             await session.commit()
 
     @classmethod
-    async def update(cls, obj_id, **kwargs):
+    async def update(cls, *args, **kwargs):
         async with async_session() as session:
-            statement = update(cls._model).filter_by(id=obj_id).values(**kwargs).returning(cls._model)
+            statement = update(cls._model).where(*args).values(**kwargs).returning(cls._model)
             res = await session.scalar(statement)
             await session.commit()
             return res

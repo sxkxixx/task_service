@@ -1,47 +1,19 @@
 from pydantic import BaseModel
 from auth.schemas import Error
 from repositories.base import BaseRepository
-from abc import ABC, abstractmethod
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from core.config import REFRESH_TOKEN_TTL_DAYS
 
 
-class Service(ABC):
+class Service:
     def __init__(self, repository: BaseRepository):
         self.repository: BaseRepository = repository
-
-    @abstractmethod
-    def add(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def get_by_filter(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def delete(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    async def select(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    async def update(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def lazyload_get(self, *args, **kwargs):
-        pass
 
 
 class UserService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    def select(self, *args, **kwargs):
-        raise NotImplementedError()
 
     async def add(self, model: BaseModel):
         try:
@@ -50,54 +22,43 @@ class UserService(Service):
             return Error(field_name='email', exception='User with current email already exists')
         return user
 
-    async def get_by_filter(self, option=None, *args):
-        if option:
-            return await self.repository.get_with_options(option, *args)
-        return await self.repository.get(*args)
+    async def get_with_options(self, option, *args):
+        return await self.repository.get_with_options(option, *args)
 
     async def delete(self, obj):
         await self.repository.delete(obj)
 
-    async def update(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def lazyload_get(self, *args, **kwargs):
-        pass
+    async def get(self, *args):
+        return await self.repository.get(*args)
 
 
 class SessionService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def add(self, user, user_agent, refresh_token):
+    async def get(self, *args):
+        return await self.repository.get(*args)
+
+    async def add(self, user, user_agent):
         expires_in = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_TTL_DAYS)
         token = await self.repository.add(
             user_id=user.id,
             user_agent=user_agent,
             expires_in=expires_in.timestamp(),
-            refresh_token=refresh_token
         )
         return token
 
-    async def get_by_filter(self, option=None, *args):
-        if option:
-            return await self.repository.get_with_options(option, *args)
-        return await self.repository.get(*args)
+    async def get_with_options(self, option, *args):
+        return await self.repository.get_with_options(option, *args)
 
     async def delete(self, refresh_session):
         await self.repository.delete(refresh_session)
 
-    async def update(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    async def select(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def lazyload_get(self, *args, **kwargs):
-        pass
-
 
 class OfferService(Service):
+    async def get(self, *args):
+        return await self.repository.get(*args)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -108,14 +69,14 @@ class OfferService(Service):
         res = await self.repository.add(**kwargs)
         return res
 
-    async def get_by_filter(self, *args):
+    async def get_with_options(self, *args):
         return await self.repository.get(*args)
 
     async def delete(self, obj):
         await self.repository.delete(obj)
 
-    async def update(self, obj_id, **updating_fields):
-        res = await self.repository.update(obj_id, **updating_fields)
+    async def update(self, *args, **kwargs):
+        res = await self.repository.update(*args, **kwargs)
         return res
 
     async def lazyload_get(self, *load_fields, **filters):
@@ -127,50 +88,30 @@ class ReadOnlyService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def get_by_filter(self, **kwargs):
-        res = await self.repository.get(**kwargs)
-        return res
+    async def get(self, *args):
+        return await self.repository.get(*args)
 
-    async def add(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    async def delete(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    async def update(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    async def select(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def lazyload_get(self, *args, **kwargs):
-        pass
+    async def get_with_options(self, *args):
+        return await self.repository.get(*args)
 
 
 class UserAccountService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    async def get(self, *args):
+        return self.repository.get(*args)
+
     async def add(self, *args, **kwargs):
         res = await self.repository.add(**kwargs)
         return res
 
-    async def get_by_filter(self, **kwargs):
-        res = await self.repository.get(**kwargs)
+    async def get_with_options(self, option, *args):
+        return await self.repository.get(option, *args)
+
+    async def update(self, *args, **kwargs):
+        res = await self.repository.update(*args, **kwargs)
         return res
-
-    async def delete(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    async def update(self, obj_id, **kwargs):
-        res = await self.repository.update(obj_id, **kwargs)
-        return res
-
-    async def select(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def lazyload_get(self, *args, **kwargs):
-        pass
 
 
 class ExecutorService(Service):
@@ -184,17 +125,17 @@ class ExecutorService(Service):
         )
         return res
 
+    async def get(self, *args):
+        return self.repository.get(*args)
+
     async def delete(self, obj):
         await self.repository.delete(obj)
 
-    async def get_by_filter(self, **kwargs):
-        return await self.repository.get(**kwargs)
+    async def get_with_options(self, option, *args):
+        return await self.repository.get(option, *args)
 
-    async def select(self, *args, **kwargs):
-        raise NotImplemented()
-
-    async def update(self, obj_id, **kwargs):
-        res = await self.repository.update(obj_id, **kwargs)
+    async def update(self, *args, **kwargs):
+        res = await self.repository.update(*args, **kwargs)
         return res
 
     async def lazyload_get(self, *args, **kwargs):
