@@ -42,7 +42,7 @@ class BaseRepository(ABC):
 
 
 class DatabaseRepository(BaseRepository):
-    _model: Base = None
+    _model = None
 
     @classmethod
     async def add(cls, **kwargs):

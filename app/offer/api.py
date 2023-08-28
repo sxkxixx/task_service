@@ -1,23 +1,21 @@
-from repositories.dependencies import offer_service, executor_service
-from repositories.services import OfferService, ExecutorService
-from offer.models import Offer, Executor, OfferType, Category
-from fastapi import APIRouter, UploadFile, File, Body
-from offer.validators import is_valid_file_signature
-from offer.schemas import OfferSchema, OfferUpdate
+from repositories.dependencies import offer_service, executor_service, file_service
+from repositories.services import OfferService, ExecutorService, FileService
+from offer.models import Offer, Executor, OfferType, Category, FileOffer
+from fastapi import APIRouter, Body
+from offer.schemas import OfferSchema, OfferUpdate, FileSchema
 from sqlalchemy.ext.asyncio import AsyncSession
-from repositories.s3_service import S3Service
 from core.database import get_async_session
 from auth.hasher import AuthDependency
 from fastapi import Depends, Response
-from sqlalchemy.orm import lazyload
+from sqlalchemy.orm import lazyload, selectinload
 from auth.models import User
 from sqlalchemy import or_, select
 from typing import List
 
-offers_api = APIRouter(prefix='/api/v1/offer', tags=['OFFER'])
+offers_api = APIRouter(prefix='/api/v1')
 
 
-@offers_api.post('/create')
+@offers_api.post('/offer/create', tags=['OFFER'])
 async def create_offer(
         _offer: OfferSchema,
         _offer_service: OfferService = Depends(offer_service),
@@ -27,7 +25,7 @@ async def create_offer(
     return offer
 
 
-@offers_api.get('/{offer_id}')
+@offers_api.get('/offer/{offer_id}', tags=['OFFER'])
 async def get_offer_by_id(
         offer_id: str,
         db_session: AsyncSession = Depends(get_async_session),
@@ -39,16 +37,14 @@ async def get_offer_by_id(
     if user and user.id == offer.user_id:
         return {
             'offer': offer,
-            's3_file': await offer.s3_file,
             'executors': await offer.awaitable_attrs.executors
         }
     return {
         'offer': offer,
-        's3_file': await offer.s3_file
     }
 
 
-@offers_api.put('/{offer_id}')
+@offers_api.put('/offer/{offer_id}', tags=['OFFER'])
 async def update_offer(
         offer_id: str,
         _offer_schema: OfferUpdate,
@@ -61,7 +57,7 @@ async def update_offer(
     return offer
 
 
-@offers_api.delete('/{offer_id}')
+@offers_api.delete('/offer/{offer_id}', tags=['OFFER'])
 async def delete_offer(
         offer_id: str,
         user: User = Depends(AuthDependency()),
@@ -76,7 +72,7 @@ async def delete_offer(
     return {'id': offer.id, 'status': 'deleted'}
 
 
-@offers_api.get('')
+@offers_api.get('/offers', tags=['OFFER'])
 async def get_offers(
         types: List[str] = None,
         category: List[str] = None,
@@ -99,30 +95,58 @@ async def get_offers(
     return res[skip: skip + limit]
 
 
-@offers_api.patch('/{offer_id}/file')
-async def append_file(
+@offers_api.post('/offer/{offer_id}/file', tags=['FILE'])
+async def create_file(
         offer_id: str,
-        file: UploadFile = File(...),
+        _file: FileSchema,
         user: User = Depends(AuthDependency()),
-        _offer_service: OfferService = Depends(offer_service)
+        _offer_service: OfferService = Depends(offer_service),
+        _file_service: FileService = Depends(file_service),
 ):
-    if not is_valid_file_signature(file):
-        return Response('Bad file signature', status_code=400)
     offer = await _offer_service.get(Offer.id == offer_id)
     if not offer:
         return Response('Not found', status_code=404)
     if offer.user_id != user.id:
+        return Response('Must\'be offer owner', status_code=403)
+    file = await _file_service.add(**_file.model_dump())
+    return file
+
+
+@offers_api.put('/file/{file_id}', tags=['FILE'])
+async def update_file(
+        file_id: str,
+        _file: FileSchema,
+        user: User = Depends(AuthDependency()),
+        _file_service: FileService = Depends(file_service),
+):
+    file: FileOffer = await _file_service.get_with_options(selectinload(FileOffer.offer), FileOffer.id == file_id)
+    if not file:
+        return Response('Not found', status_code=404)
+    offer: Offer = file.offer
+    if offer.user_id != user.id:
         return Response('Forbidden', status_code=403)
-    if offer.s3_filename:
-        s3_filename = await S3Service.change_files(offer.s3_filename, file)
-    else:
-        s3_filename = await S3Service.upload_file(file)
-    offer = await _offer_service.update(Offer.id == offer.id, s3_filename=s3_filename)
-    return offer
+    file = await _file_service.update(file.id, **_file.model_dump())
+    return file
 
 
-@offers_api.post('/{offer_id}/executor/create')
-async def create_executor(
+@offers_api.delete('/file/{file_id}', tags=['FILE'])
+async def delete_file(
+        file_id: str,
+        user: User = Depends(AuthDependency()),
+        _file_service: FileService = Depends(file_service),
+):
+    file: FileOffer = await _file_service.get_with_options(selectinload(FileOffer.offer), FileOffer.id == file_id)
+    if not file:
+        return Response('Not found', status_code=404)
+    offer: Offer = file.offer
+    if offer.user_id != user.id:
+        return Response('Forbidden', status_code=403)
+    await _file_service.delete(file)
+    return {'id': file.id, 'status': 'deleted'}
+
+
+@offers_api.post('/offer/{offer_id}/executor', tags=['EXECUTOR'])
+async def become_executor(
         offer_id: str,
         user: User = Depends(AuthDependency()),
         _executor_service: ExecutorService = Depends(executor_service),
@@ -134,38 +158,4 @@ async def create_executor(
     if offer.user_id == user.id:
         return Response('Offer\'s owner can\'t be executor of its offer', status_code=400)
     executor = await _executor_service.add(user_id=user.id, offer_id=offer_id)
-    return executor
-
-
-@offers_api.delete('/{offer_id}/executor/{executor_id}/delete')
-async def delete_executor(
-        offer_id: str,
-        executor_id: str,
-        user: User = Depends(AuthDependency()),
-        _executor_service: ExecutorService = Depends(executor_service),
-):
-    executor = await _executor_service.lazyload_get(
-        Executor.offer,
-        id=executor_id, offer_id=offer_id)
-    if not executor:
-        return Response('Not found', status_code=404)
-    if executor.user_id != user.id or executor.offer.user_id != user.id:
-        return Response('Forbidden', status_code=403)
-    await _executor_service.delete(executor)
-    return {'id': executor.id, 'status': 'deleted'}
-
-
-@offers_api.patch('/{offer_id}/executor/{executor_id}/is_approved')
-async def is_approved_executor(
-        offer_id: str,
-        executor_id: str,
-        is_approved: bool = Body(...),
-        user: User = Depends(AuthDependency()),
-        _executor_service: ExecutorService = Depends(executor_service),
-        _offer_service: OfferService = Depends(offer_service)
-):
-    offer = await _offer_service.get(Offer.id == offer_id, Offer.user_id == user.id)
-    if not offer:
-        return Response(f'Not found or {user.email} is not owner offer', status_code=404)
-    executor = await _executor_service.update(Executor.id == executor_id, is_approved=is_approved)
     return executor

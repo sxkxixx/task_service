@@ -140,3 +140,24 @@ class ExecutorService(Service):
     async def lazyload_get(self, *args, **kwargs):
         res = await self.repository.lazyload_get(*args, **kwargs)
         return res
+
+
+class FileService(Service):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def get(self, *args):
+        return await self.repository.get(*args)
+
+    async def add(self, **kwargs):
+        return await self.repository.add(**kwargs)
+
+    async def delete(self, obj):
+        await self.repository.delete(obj)
+
+    async def update(self, *filters, **fields):
+        res = await self.repository.update(*filters, **fields)
+        return res
+
+    async def get_with_options(self, option, *args):
+        return await self.repository.get_with_options(option, *args)

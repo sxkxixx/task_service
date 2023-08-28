@@ -7,7 +7,7 @@ from sqlalchemy import pool
 from alembic import context
 import asyncio
 from auth.models import User, RefreshSession, UserAccount
-from offer.models import Category, Offer, OfferType
+from offer.models import Category, Offer, OfferType, FileOffer
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

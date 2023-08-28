@@ -4,7 +4,9 @@ from repositories.services import (
     OfferService,
     UserAccountService,
     ExecutorService,
-    ReadOnlyService)
+    ReadOnlyService,
+    FileService
+)
 from repositories.repositories import (
     UserRepository,
     RefreshSessionRepository,
@@ -12,7 +14,8 @@ from repositories.repositories import (
     CategoryRepository,
     OfferTypeRepository,
     UserAccountRepository,
-    ExecutorRepository
+    ExecutorRepository,
+    FileRepository
 )
 
 
@@ -42,3 +45,7 @@ def user_account_service() -> UserAccountService:
 
 def executor_service() -> ExecutorService:
     return ExecutorService(ExecutorRepository)
+
+
+def file_service() -> FileService:
+    return FileService(FileRepository)
