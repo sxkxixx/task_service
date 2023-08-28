@@ -1,9 +1,9 @@
 from repositories.dependencies import user_service, session_service, user_account_service
+from repositories.services import UserService, SessionService, UserAccountService
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, AuthDependency
 from auth.models import RefreshSession, UserAccount
-from repositories.services import UserService, SessionService, UserAccountService
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 from auth.models import User
@@ -35,8 +35,8 @@ async def get_token(
     if not Hasher.is_correct_password(_user.password, user.password):
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
-    db_token = await _session_service.add(user, user_agent)
-    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth')
+    db_token: RefreshSession = await _session_service.add(user, user_agent)
+    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth/token', max_age=db_token.expires_in)
     return access
 
 
@@ -56,8 +56,8 @@ async def _refresh_token(
         return Response("Redirect to /login page", status_code=302)
     user = refresh_session.user
     access = Token.get_access_token(user)
-    db_token = await _session_service.add(user, user_agent)
-    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth')
+    db_token: RefreshSession = await _session_service.add(user, user_agent)
+    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth', expires=db_token.expires_in)
     return access
 
 

@@ -81,7 +81,7 @@ class DatabaseRepository(BaseRepository):
             return [x[0] for x in res.fetchall()]
 
     @classmethod
-    async def get_with_options(cls, load_option=None, *args):
+    async def get_with_options(cls, load_option, *args):
         async with async_session() as session:
             statement = select(cls._model).where(*args).options(load_option)
             res = await session.scalar(statement)
@@ -102,4 +102,4 @@ class DatabaseRepository(BaseRepository):
         async with async_session() as session:
             statement = select(cls._model).filter_by(**filters).options(lazyload(*load_fields))
             res = await session.scalar(statement)
-        return res
+            return res

@@ -69,8 +69,8 @@ class OfferService(Service):
         res = await self.repository.add(**kwargs)
         return res
 
-    async def get_with_options(self, *args):
-        return await self.repository.get(*args)
+    async def get_with_options(self, option, *args):
+        return await self.repository.get_with_options(option, *args)
 
     async def delete(self, obj):
         await self.repository.delete(obj)
@@ -80,8 +80,7 @@ class OfferService(Service):
         return res
 
     async def lazyload_get(self, *load_fields, **filters):
-        res = await self.repository.lazyload_get(*load_fields, **filters)
-        return res
+        return await self.repository.lazyload_get(*load_fields, **filters)
 
 
 class ReadOnlyService(Service):
@@ -102,7 +101,7 @@ class UserAccountService(Service):
     async def get(self, *args):
         return self.repository.get(*args)
 
-    async def add(self, *args, **kwargs):
+    async def add(self, **kwargs):
         res = await self.repository.add(**kwargs)
         return res
 

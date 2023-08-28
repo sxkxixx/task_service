@@ -1,11 +1,11 @@
-from typing import List
-
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from repositories.s3_service import S3Service
 from sqlalchemy.dialects.postgresql import UUID
-
-from auth.models import User
 from core.database import Base
+from auth.models import User
 from datetime import datetime
+from typing import List
 from uuid import uuid4
 import sqlalchemy
 
@@ -19,15 +19,6 @@ class Category(Base):
     category_offers: Mapped[List['Offer']] = relationship('Offer', back_populates='category')
 
 
-class OfferStatus(Base):
-    __tablename__ = 'offer_status'
-
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    status: Mapped[str] = mapped_column(sqlalchemy.String(50), unique=True)
-
-    status_offers: Mapped[List['Offer']] = relationship('Offer', back_populates='status')
-
-
 class OfferType(Base):
     __tablename__ = 'offer_type'
 
@@ -37,7 +28,7 @@ class OfferType(Base):
     type_offers: Mapped[List['Offer']] = relationship('Offer', back_populates='type')
 
 
-class Offer(Base):
+class Offer(Base, AsyncAttrs):
     __tablename__ = 'offers'
 
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -48,14 +39,18 @@ class Offer(Base):
     category_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('categories.id'))
     type_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('offer_type.id'))
     is_anonymous: Mapped[bool] = mapped_column(sqlalchemy.Boolean)
-    is_premium: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
+    is_closed: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(sqlalchemy.DateTime, default=datetime.utcnow)
-    status_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('offer_status.id'))
 
-    status: Mapped['OfferStatus'] = relationship('OfferStatus', back_populates='status_offers')
     category: Mapped['Category'] = relationship('Category', back_populates='category_offers')
     type: Mapped['OfferType'] = relationship('OfferType', back_populates='type_offers')
     executors: Mapped[List['Executor']] = relationship('Executor', back_populates='offer')
+
+    @property
+    async def s3_file(self):
+        if self.s3_filename:
+            return await S3Service.get_presigned_url(self.s3_filename)
+        return None
 
 
 class Executor(Base):

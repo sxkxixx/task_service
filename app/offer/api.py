@@ -1,26 +1,26 @@
-from repositories.dependencies import offer_service, category_service, offer_type_service, executor_service
+from repositories.dependencies import offer_service, executor_service
+from repositories.services import OfferService, ExecutorService
 from offer.models import Offer, Executor, OfferType, Category
 from fastapi import APIRouter, UploadFile, File, Body
 from offer.validators import is_valid_file_signature
 from offer.schemas import OfferSchema, OfferUpdate
+from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.s3_service import S3Service
-from repositories.services import OfferService, ExecutorService
+from core.database import get_async_session
 from auth.hasher import AuthDependency
 from fastapi import Depends, Response
+from sqlalchemy.orm import lazyload
 from auth.models import User
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 from typing import List
 
 offers_api = APIRouter(prefix='/api/v1/offer', tags=['OFFER'])
-s3_service = S3Service()
 
 
 @offers_api.post('/create')
 async def create_offer(
         _offer: OfferSchema,
         _offer_service: OfferService = Depends(offer_service),
-        _category_service=Depends(category_service),
-        _offer_type_service=Depends(offer_type_service),
         user: User = Depends(AuthDependency()),
 ):
     offer = await _offer_service.add(user_id=user.id, **_offer.model_dump())
@@ -30,14 +30,22 @@ async def create_offer(
 @offers_api.get('/{offer_id}')
 async def get_offer_by_id(
         offer_id: str,
-        _offer_session: OfferService = Depends(offer_service),
+        db_session: AsyncSession = Depends(get_async_session),
         user: User | None = Depends(AuthDependency(is_strict=False))
 ):
-    offer = await _offer_session.lazyload_get(Offer.executors, id=offer_id)
+    offer: Offer = await db_session.scalar(select(Offer).where(Offer.id == offer_id).options(lazyload(Offer.executors)))
     if not offer:
         return Response('Not found', status_code=404)
-
-    return offer
+    if user and user.id == offer.user_id:
+        return {
+            'offer': offer,
+            's3_file': await offer.s3_file,
+            'executors': await offer.awaitable_attrs.executors
+        }
+    return {
+        'offer': offer,
+        's3_file': await offer.s3_file
+    }
 
 
 @offers_api.put('/{offer_id}')
@@ -106,9 +114,9 @@ async def append_file(
     if offer.user_id != user.id:
         return Response('Forbidden', status_code=403)
     if offer.s3_filename:
-        s3_filename = await s3_service.change_files(offer.s3_filename, file)
+        s3_filename = await S3Service.change_files(offer.s3_filename, file)
     else:
-        s3_filename = await s3_service.upload_file(file)
+        s3_filename = await S3Service.upload_file(file)
     offer = await _offer_service.update(Offer.id == offer.id, s3_filename=s3_filename)
     return offer
 

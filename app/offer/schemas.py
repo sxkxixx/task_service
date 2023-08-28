@@ -8,7 +8,6 @@ class OfferSchema(BaseModel):
     category_id: str = 'Order\'s category id'
     type_id: str = 'Order\'s type id'
     is_anonymous: bool = False
-    status_id: str = "Order\'s status id"
 
 
 class OfferUpdate(BaseModel):
@@ -17,4 +16,3 @@ class OfferUpdate(BaseModel):
     category_id: Optional[str] = 'Order\'s category'
     type_id: Optional[str] = 'Order\'s type'
     is_anonymous: Optional[bool] = False
-    status_id: str = "Order\'s status id"

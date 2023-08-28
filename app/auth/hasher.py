@@ -1,13 +1,13 @@
-from auth.models import User
 from core.config import ACCESS_TOKEN_TTL_MINUTES, REFRESH_TOKEN_TTL_DAYS
-from repositories.dependencies import user_service
 from fastapi import Header, Response, Depends, HTTPException
-from core.config import SECRET_KEY, ALGORITHM
 from repositories.services import Service, UserService
+from repositories.dependencies import user_service
+from core.config import SECRET_KEY, ALGORITHM
 from passlib.context import CryptContext
 from datetime import timedelta, datetime
 from typing import Literal, Annotated
 from jose import jwt, JWTError
+from auth.models import User
 from functools import wraps
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -32,13 +32,6 @@ class Token:
         return jwt.encode(payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
     @classmethod
-    def get_tokens_pair(cls, user):
-        return (
-            cls._get_encode_token(user, 'access_token', timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES)),
-            cls._get_encode_token(user, 'refresh_token', timedelta(days=REFRESH_TOKEN_TTL_DAYS))
-        )
-
-    @classmethod
     def get_access_token(cls, user):
         return cls._get_encode_token(user, 'access_token', timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES))
 
@@ -46,43 +39,6 @@ class Token:
     def get_token_payload(token):
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-
-
-# TODO: не работает, да и не нужно
-def auth_required(func, service: Service = Depends(user_service)):
-    @wraps(func)
-    async def wrapper(authorization: Annotated[str, Header()] = None, *args, **kwargs):
-        if not authorization:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        try:
-            payload = Token.get_token_payload(authorization)
-        except JWTError:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        email = payload.get('email')
-        user = await service.get_with_options(email=email)
-        if not user:
-            return Response("Unauthorized", status_code=401)
-        func_result = await func(*args, **kwargs)
-        return func_result
-
-    return wrapper
-
-
-# TODO: Работает, но написал классовую зависимость
-async def auth_dependency(authorization: Annotated[str, Header()] = None, service: Service = Depends(user_service)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail='No access token')
-    try:
-        payload = Token.get_token_payload(authorization)
-    except JWTError as e:
-        raise HTTPException(status_code=401, detail=e.__str__())
-    expires_in = datetime.fromtimestamp(float(payload.get('exp')))
-    if expires_in < datetime.utcnow():
-        raise HTTPException(status_code=401, detail='Access token has expired')
-    user = await service.get_with_options(User.email == payload.get('email'))
-    if not user:
-        return Response('Unauthorized', status_code=401)
-    return user
 
 
 class AuthDependency:

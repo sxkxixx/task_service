@@ -13,14 +13,20 @@ class S3Service:
     service_name = 's3'
     endpoint_url = 'https://storage.yandexcloud.net'
 
-    async def upload_file(self, file: UploadFile = File(...)):
-        async with self.session.client(self.service_name, endpoint_url=self.endpoint_url) as client:
-            unique_filename = self.__generate_unique_filename(file.filename)
+    @classmethod
+    async def __call__(cls):
+        return cls
+
+    @classmethod
+    async def upload_file(cls, file: UploadFile = File(...)):
+        async with cls.session.client(cls.service_name, endpoint_url=cls.endpoint_url) as client:
+            unique_filename = cls.__generate_unique_filename(file.filename)
             await client.upload_fileobj(file, BUCKET_NAME, unique_filename)
         return unique_filename
 
-    async def get_presigned_url(self, file_name):
-        async with self.session.client(self.service_name, endpoint_url=self.endpoint_url) as client:
+    @classmethod
+    async def get_presigned_url(cls, file_name):
+        async with cls.session.client(cls.service_name, endpoint_url=cls.endpoint_url) as client:
             url = await client.generate_presigned_url(
                 'get_object',
                 Params={"Bucket": BUCKET_NAME, "Key": file_name},
@@ -28,11 +34,13 @@ class S3Service:
             )
         return url
 
-    async def delete_file(self, file_name):
-        async with self.session.client(self.service_name, endpoint_url=self.endpoint_url) as client:
+    @classmethod
+    async def delete_file(cls, file_name):
+        async with cls.session.client(cls.service_name, endpoint_url=cls.endpoint_url) as client:
             response = await client.delete_object(Bucket=BUCKET_NAME, Key=file_name)
         return response
 
+    @classmethod
     async def change_files(self, previous_file_name: str, current_file: UploadFile = File(...)):
         async with self.session.client(self.service_name, endpoint_url=self.endpoint_url) as client:
             await client.delete_object(Bucket=BUCKET_NAME, Key=previous_file_name)
