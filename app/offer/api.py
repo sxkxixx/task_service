@@ -1,15 +1,13 @@
 from repositories.dependencies import offer_service, executor_service, file_service
 from repositories.services import OfferService, ExecutorService, FileService
-from offer.models import Offer, Executor, OfferType, Category, FileOffer
-from fastapi import APIRouter, Body
-from offer.schemas import OfferSchema, OfferUpdate, FileSchema
-from sqlalchemy.ext.asyncio import AsyncSession
-from core.database import get_async_session
+from offer.models import Offer, OfferType, Category, FileOffer, Executor
+from offer.schemas import OfferSchema, OfferUpdate, FileSchema, OfferPublic, OfferPrivate
+from sqlalchemy.orm import selectinload
 from auth.hasher import AuthDependency
 from fastapi import Depends, Response
-from sqlalchemy.orm import lazyload, selectinload
+from fastapi import APIRouter
+from sqlalchemy import or_
 from auth.models import User
-from sqlalchemy import or_, select
 from typing import List
 
 offers_api = APIRouter(prefix='/api/v1')
@@ -25,23 +23,33 @@ async def create_offer(
     return offer
 
 
-@offers_api.get('/offer/{offer_id}', tags=['OFFER'])
-async def get_offer_by_id(
+@offers_api.get('/offer/private/{offer_id}', tags=['OFFER'])
+async def get_private_offer(
         offer_id: str,
-        db_session: AsyncSession = Depends(get_async_session),
-        user: User | None = Depends(AuthDependency(is_strict=False))
+        user: User = Depends(AuthDependency()),
+        _offer_service: OfferService = Depends(offer_service),
 ):
-    offer: Offer = await db_session.scalar(select(Offer).where(Offer.id == offer_id).options(lazyload(Offer.executors)))
+    offer = await _offer_service.get_with_options(
+        [selectinload(Offer.executors).selectinload(Executor.user).selectinload(User.personal_data)],
+        Offer.id == offer_id, Offer.user_id == user.id
+    )
     if not offer:
         return Response('Not found', status_code=404)
-    if user and user.id == offer.user_id:
-        return {
-            'offer': offer,
-            'executors': await offer.awaitable_attrs.executors
-        }
-    return {
-        'offer': offer,
-    }
+    return OfferPrivate.offer_private_view(offer)
+
+
+@offers_api.get('/offer/public/{offer_id}', tags=['OFFER'])
+async def get_public_offer(
+        offer_id: str,
+        _offer_service: OfferService = Depends(offer_service),
+):
+    _offer: Offer = await _offer_service.get_with_options(
+        [selectinload(Offer.user).selectinload(User.personal_data)],
+        Offer.id == offer_id
+    )
+    if not _offer:
+        return Response('Not found', status_code=404)
+    return OfferPublic.offer_public_view(_offer)
 
 
 @offers_api.put('/offer/{offer_id}', tags=['OFFER'])

@@ -81,25 +81,18 @@ class DatabaseRepository(BaseRepository):
             return [x[0] for x in res.fetchall()]
 
     @classmethod
-    async def get_with_options(cls, load_option, *args):
+    async def get_with_options(cls, load_options, *args):
         async with async_session() as session:
-            statement = select(cls._model).where(*args).options(load_option)
+            statement = select(cls._model).where(*args).options(*load_options if isinstance(load_options, list) else load_options)
             res = await session.scalar(statement)
             return res
 
     @classmethod
     async def select_join(cls, join_models: List, *filters):
         async with async_session() as session:
-            statement = select(cls._model)
+            statement = select(cls._model, *[model.get('target') for model in join_models])
             for model in join_models:
-                statement = statement.join(model)
+                statement = statement.join(**model)
             statement = statement.where(*filters)
             res = await session.execute(statement)
         return [x[0] for x in res.fetchall()]
-
-    @classmethod
-    async def lazyload_get(cls, *load_fields, **filters):
-        async with async_session() as session:
-            statement = select(cls._model).filter_by(**filters).options(lazyload(*load_fields))
-            res = await session.scalar(statement)
-            return res

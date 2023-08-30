@@ -15,7 +15,7 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
 
     refresh_session = relationship('RefreshSession', back_populates='user')
-    personal_data = relationship('UserAccount', backref='personal_data')
+    personal_data: Mapped['UserAccount'] = relationship('UserAccount', backref='personal_data')
     offer_executor = relationship('Executor', back_populates='user')
 
     def __repr__(self):

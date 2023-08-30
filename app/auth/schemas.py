@@ -1,5 +1,7 @@
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, model_validator, field_validator, FieldValidationInfo
 import re
 
@@ -7,6 +9,12 @@ import re
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserRead(BaseModel):
+    id: UUID
+    email: Optional[EmailStr]
+    personal_data: Optional['UserAccountInfo']
 
 
 class UserCreateSchema(BaseModel):

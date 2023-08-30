@@ -44,6 +44,7 @@ class Offer(Base, AsyncAttrs):
     category: Mapped['Category'] = relationship('Category', back_populates='category_offers')
     type: Mapped['OfferType'] = relationship('OfferType', back_populates='type_offers')
     executors: Mapped[List['Executor']] = relationship('Executor', back_populates='offer')
+    user: Mapped['User'] = relationship('User', backref='offers')
 
 
 class FileOffer(Base):

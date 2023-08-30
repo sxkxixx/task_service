@@ -15,7 +15,7 @@ class UserService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def add(self, model: BaseModel):
+    async def add(self, model):
         try:
             user = await self.repository.add(**model.model_dump())
         except IntegrityError:
@@ -69,8 +69,8 @@ class OfferService(Service):
         res = await self.repository.add(**kwargs)
         return res
 
-    async def get_with_options(self, option, *args):
-        return await self.repository.get_with_options(option, *args)
+    async def get_with_options(self, options, *args):
+        return await self.repository.get_with_options(options, *args)
 
     async def delete(self, obj):
         await self.repository.delete(obj)
@@ -79,8 +79,8 @@ class OfferService(Service):
         res = await self.repository.update(*args, **kwargs)
         return res
 
-    async def lazyload_get(self, *load_fields, **filters):
-        return await self.repository.lazyload_get(*load_fields, **filters)
+    async def select_join(self, join_models, *filters):
+        return await self.repository.select_join(join_models, *filters)
 
 
 class ReadOnlyService(Service):
@@ -135,10 +135,6 @@ class ExecutorService(Service):
 
     async def update(self, *args, **kwargs):
         res = await self.repository.update(*args, **kwargs)
-        return res
-
-    async def lazyload_get(self, *args, **kwargs):
-        res = await self.repository.lazyload_get(*args, **kwargs)
         return res
 
 

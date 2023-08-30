@@ -1,6 +1,6 @@
 from repositories.dependencies import user_service, session_service, user_account_service
 from repositories.services import UserService, SessionService, UserAccountService
-from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie, Request
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, AuthDependency
 from auth.models import RefreshSession, UserAccount
@@ -9,10 +9,10 @@ from datetime import datetime
 from auth.models import User
 from typing import Annotated
 
-auth = APIRouter(prefix='/api/v1/auth')
+auth = APIRouter(prefix='/api/v1')
 
 
-@auth.post('/create_user', tags=['USER'])
+@auth.post('/user/create_user', tags=['USER'])
 async def create_user(user: UserCreateSchema, service: UserService = Depends(user_service)) -> dict | Error:
     user: User = await service.add(
         UserLogin(email=user.email, password=Hasher.get_password_hash(user.password)))
@@ -21,7 +21,7 @@ async def create_user(user: UserCreateSchema, service: UserService = Depends(use
     return {'email': user.email, 'status': 'created'}
 
 
-@auth.post('/token', tags=['AUTH'])
+@auth.post('/auth/token', tags=['AUTH'])
 async def get_token(
         _user: UserLogin,
         response: Response,
@@ -36,11 +36,11 @@ async def get_token(
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
     db_token: RefreshSession = await _session_service.add(user, user_agent)
-    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth/token', max_age=db_token.expires_in)
+    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth', max_age=db_token.expires_in)
     return access
 
 
-@auth.post('/token/refresh', tags=['AUTH'])
+@auth.post('/auth/token/refresh', tags=['AUTH'])
 async def _refresh_token(
         response: Response,
         user_agent: Annotated[str, Header()],
@@ -61,8 +61,9 @@ async def _refresh_token(
     return access
 
 
-@auth.post('/logout', tags=['AUTH'])
+@auth.post('/auth/logout', tags=['AUTH'])
 async def logout(
+        response: Response,
         user_agent: Annotated[str, Header()],
         refresh_token: Annotated[str, Cookie()] = None,
         user: User = Depends(AuthDependency()),
@@ -71,11 +72,12 @@ async def logout(
     session = await _session_service.get(RefreshSession.user_id == user.id,
                                          RefreshSession.user_agent == user_agent,
                                          RefreshSession.id == refresh_token)
+    response.delete_cookie('refresh_token')
     await _session_service.delete(session)
     return {'user': user.id, 'status': 'logged out'}
 
 
-@auth.post('/user_info', tags=['USER'])
+@auth.post('/user/user_info', tags=['USER'])
 async def append_user_info(
         info: UserAccountInfo,
         _user_account_service: UserAccountService = Depends(user_account_service),
@@ -88,7 +90,7 @@ async def append_user_info(
     return user_info
 
 
-@auth.put('/user_info/update', tags=['USER'])
+@auth.put('/user/user_info/update', tags=['USER'])
 async def update_user_info(
         info: UserAccountInfo,
         _user_account_service: UserAccountService = Depends(user_account_service),
@@ -98,7 +100,7 @@ async def update_user_info(
     return user_info
 
 
-@auth.delete('/delete_user', tags=['USER'])
+@auth.delete('/user/delete_user', tags=['USER'])
 async def delete_user(
         user: User = Depends(AuthDependency()),
         _user_service: UserService = Depends(user_service)
