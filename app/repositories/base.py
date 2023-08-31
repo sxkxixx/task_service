@@ -37,7 +37,7 @@ class BaseRepository(ABC):
         pass
 
     @abstractmethod
-    def lazyload_get(self, *args, **kwargs):
+    def select_with_options(self, *args, **kwargs):
         pass
 
 
@@ -78,7 +78,7 @@ class DatabaseRepository(BaseRepository):
         async with async_session() as session:
             statement = select(cls._model).where(*args)
             res = await session.execute(statement)
-            return [x[0] for x in res.fetchall()]
+            return res.scalars().all()
 
     @classmethod
     async def get_with_options(cls, load_options, *args):
@@ -86,6 +86,14 @@ class DatabaseRepository(BaseRepository):
             statement = select(cls._model).where(*args).options(*load_options if isinstance(load_options, list) else load_options)
             res = await session.scalar(statement)
             return res
+
+    @classmethod
+    async def select_with_options(cls, load_options, *args):
+        async with async_session() as session:
+            statement = select(cls._model).where(*args).options(
+                *load_options if isinstance(load_options, list) else load_options)
+            res = await session.execute(statement)
+            return res.scalars().all()
 
     @classmethod
     async def select_join(cls, join_models: List, *filters):

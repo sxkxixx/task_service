@@ -63,7 +63,7 @@ class OfferService(Service):
         super().__init__(*args, **kwargs)
 
     async def select(self, *args):
-        return await self.repository.select_join(*args)
+        return await self.repository.select(*args)
 
     async def add(self, **kwargs):
         res = await self.repository.add(**kwargs)
@@ -81,6 +81,9 @@ class OfferService(Service):
 
     async def select_join(self, join_models, *filters):
         return await self.repository.select_join(join_models, *filters)
+
+    async def select_with_options(self, options, *args):
+        return await self.repository.select_with_options(options, *args)
 
 
 class ReadOnlyService(Service):

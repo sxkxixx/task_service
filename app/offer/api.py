@@ -30,7 +30,10 @@ async def get_private_offer(
         _offer_service: OfferService = Depends(offer_service),
 ):
     offer = await _offer_service.get_with_options(
-        [selectinload(Offer.executors).selectinload(Executor.user).selectinload(User.personal_data)],
+        [
+            selectinload(Offer.executors).selectinload(Executor.user).selectinload(User.personal_data),
+            selectinload(Offer.files)
+        ],
         Offer.id == offer_id, Offer.user_id == user.id
     )
     if not offer:
@@ -50,6 +53,33 @@ async def get_public_offer(
     if not _offer:
         return Response('Not found', status_code=404)
     return OfferPublic.offer_public_view(_offer)
+
+
+@offers_api.get('/offers/main', tags=['OFFER'])
+async def get_offers(
+        type_id: str = None,
+        category_id: str = None,
+        _offer_service: OfferService = Depends(offer_service)
+):
+    filters = []
+    if type_id:
+        filters.append(Offer.type_id == type_id)
+    if category_id:
+        filters.append(Offer.category_id == category_id)
+    res = await _offer_service.select(*filters)
+    return res
+
+
+@offers_api.get('/offers/profile', tags=['OFFER'])
+async def get_user_offer(
+        _type_id: str = None,
+        _offer_service: OfferService = Depends(offer_service),
+        user: User = Depends(AuthDependency())
+):
+    res = await _offer_service.select(
+        Offer.user_id == user.id, Offer.type_id == _type_id
+    )
+    return res
 
 
 @offers_api.put('/offer/{offer_id}', tags=['OFFER'])
@@ -78,29 +108,6 @@ async def delete_offer(
         return Response('Forbidden', status_code=403)
     await _offer_service.delete(offer)
     return {'id': offer.id, 'status': 'deleted'}
-
-
-@offers_api.get('/offers', tags=['OFFER'])
-async def get_offers(
-        types: List[str] = None,
-        category: List[str] = None,
-        skip: int = 0,
-        limit: int = 20,
-        _offer_service: OfferService = Depends(offer_service)
-):
-    join_models, filters = [], []
-
-    if types:
-        join_models.append(OfferType)
-        for _type in types:
-            filters.append(OfferType.type == _type)
-    if category:
-        join_models.append(Category)
-        for _category in category:
-            filters.append(Category.name == _category)
-
-    res = await _offer_service.select(join_models, or_(*filters))
-    return res[skip: skip + limit]
 
 
 @offers_api.post('/offer/{offer_id}/file', tags=['FILE'])

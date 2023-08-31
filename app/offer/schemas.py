@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from auth.schemas import UserRead, UserAccountInfo
 from uuid import UUID
+from core.config import FILE_LINKS_DOMAIN
 
 
 class OfferSchema(BaseModel):
@@ -65,6 +66,7 @@ class OfferPublic(OfferInternal):
 
 class OfferPrivate(OfferInternal):
     executors: List['ExecutorInternal']
+    files: List['FileRead']
 
     @classmethod
     def offer_private_view(cls, offer):
@@ -79,6 +81,7 @@ class OfferPrivate(OfferInternal):
             is_closed=offer.is_closed,
             deadline=offer.deadline,
             created_at=offer.created_at,
+            files=[FileRead.file_view(file) for file in offer.files],
             executors=[
                 ExecutorInternal(
                     id=executor.id,
@@ -115,15 +118,27 @@ class FileSchema(BaseModel):
     @field_validator('description')
     def validate_description(cls, field: str, info: FieldValidationInfo) -> str:
         if len(field) > 255:
-            raise ValueError(f'{info.field_name} must\' be less than 256 symbols')
+            raise ValueError(f'{info.field_name} must be less than 256 symbols')
         return field
 
     @classmethod
     @field_validator('link')
     def validate_link(cls, field: str, info: FieldValidationInfo) -> str:
-        return field
+        for link in FILE_LINKS_DOMAIN:
+            if field.startswith(link):
+                return field
+        raise ValueError(f'{info.field_name} must be in available domain list')
 
 
 class FileRead(FileSchema):
-    id: str
-    offer_id: str
+    id: UUID
+    offer_id: UUID
+
+    @classmethod
+    def file_view(cls, file):
+        return cls(
+            id=file.id,
+            offer_id=file.offer_id,
+            link=file.link,
+            description=file.description
+        )
