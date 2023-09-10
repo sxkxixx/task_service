@@ -1,5 +1,6 @@
 from offer.schemas import OfferSchema, OfferUpdate, FileSchema, OfferPublic, OfferPrivate
-from repositories.dependencies import offer_service, executor_service, file_service
+from repositories.dependencies import offer_service, executor_service, file_service, category_service, \
+    offer_type_service
 from repositories.services import OfferService, ExecutorService, FileService
 from offer.models import Offer, FileOffer, Executor
 from sqlalchemy.orm import selectinload
@@ -9,6 +10,16 @@ from fastapi import APIRouter
 from auth.models import User
 
 offers_api = APIRouter(prefix='/api/v1')
+
+
+@offers_api.get('/offer/meta', tags=['OFFER'])
+async def app_init_route(
+        _category_service=Depends(category_service),
+        _offer_type_service=Depends(offer_type_service)
+):
+    categories = await _category_service.select()
+    types = await _offer_type_service.select()
+    return {'categories': categories, 'types': types}
 
 
 @offers_api.post('/offer/create', tags=['OFFER'])
@@ -74,20 +85,25 @@ async def get_user_offers(
         _offer_service: OfferService = Depends(offer_service),
         user: User = Depends(AuthDependency())
 ):
+    # TODO: Возвращает Offers, которые создал USER
     res = await _offer_service.select(
         Offer.user_id == user.id, Offer.type_id == _type_id
     )
     return res
 
 
-@offers_api.get('/offers/approved', tags=['OFFER'])
-async def get_user_approved_offers(
+@offers_api.get('/offers/responses', tags=['OFFER'])
+async def get_user_response_offers(
         _type_id: str = None,
         _offer_service: OfferService = Depends(offer_service),
         user: User = Depends(AuthDependency())
 ):
-    res = await _offer_service.select(
-        Offer.user_id == user.id, Offer.type_id == _type_id
+    # TODO: "Отклики" User'a
+    res = await _offer_service.select_join(
+        [
+            {'target': Executor, 'onclause': Executor.offer_id == Offer.id}
+        ],
+        Executor.user_id == user.id
     )
     return res
 
@@ -184,3 +200,23 @@ async def become_executor(
         return Response('Offer\'s owner can\'t be executor of its offer', status_code=400)
     executor = await _executor_service.add(user_id=user.id, offer_id=offer_id)
     return executor
+
+
+@offers_api.delete('/offer/{offer_id}/executor/{executor_id}', tags=['EXECUTOR'])
+async def delete_executor(
+        offer_id: str,
+        executor_id: str,
+        user: User = Depends(AuthDependency()),
+        _executor_service: ExecutorService = Depends(executor_service),
+):
+    executor = await _executor_service.get_with_options(
+        [selectinload(Executor.offer)],
+        Executor.id == executor_id, Offer.id == offer_id
+    )
+    if not executor:
+        return Response('Not Found', status_code=404)
+    offer = executor.offer
+    if not (offer.user_id == user.id or executor.user_id == user.id):
+        return Response('Forbidden', status_code=403)
+    await _executor_service.delete(executor)
+    return {'id': executor.id, 'status': 'deleted'}

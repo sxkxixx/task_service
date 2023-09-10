@@ -1,5 +1,5 @@
-from typing import Optional
-from datetime import datetime
+from typing import Optional, Literal
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, model_validator, field_validator, FieldValidationInfo
@@ -49,11 +49,14 @@ class RefreshSessionSchema(BaseModel):
 
 
 class UserAccountInfo(BaseModel):
-    first_name: str
-    patronymic: str
-    surname: str
-    phone_number: Optional[str] = None
-    tg_nickname: Optional[str] = None
+    first_name: Optional[str]
+    patronymic: Optional[str]
+    surname: Optional[str]
+    sex: Optional[Literal['male', 'female']] = "'male' or 'female'"
+    birthday: Optional[date]
+    bio: Optional[str]
+    phone_number: Optional[str]
+    tg_nickname: Optional[str]
 
     @classmethod
     @field_validator('phone_number')

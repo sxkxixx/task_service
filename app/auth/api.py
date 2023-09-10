@@ -1,5 +1,5 @@
-from repositories.dependencies import user_service, session_service, user_account_service
-from repositories.services import UserService, SessionService, UserAccountService
+from repositories.dependencies import user_service, user_account_service
+from repositories.services import UserService, UserAccountService
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, AuthDependency
@@ -24,14 +24,14 @@ async def get_token(
     if not Hasher.is_correct_password(_user.password, user.password):
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
-    refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
-    await refresh_session.push_redis()
-    response.set_cookie(
-        'refresh_token',
-        refresh_session.get_refresh_id,
-        httponly=True,
-        path='/api/v1/auth',
-        max_age=refresh_session.expires_in)
+    # refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    # await refresh_session.push_redis()
+    # response.set_cookie(
+    #     'refresh_token',
+    #     refresh_session.get_refresh_id,
+    #     httponly=True,
+    #     path='/api/v1/auth',
+    #     max_age=refresh_session.expires_in)
     return access
 
 
@@ -66,7 +66,6 @@ async def logout(
         user_agent: Annotated[str, Header()],
         refresh_token: Annotated[str, Cookie()] = None,
         user: User = Depends(AuthDependency()),
-        _session_service: SessionService = Depends(session_service)
 ):
     refresh_session: RefreshSession = await RefreshSession.get_session(refresh_token)
     if refresh_session.ua != user_agent or user.id != refresh_session.user_id:
@@ -77,25 +76,18 @@ async def logout(
 
 
 @auth.post('/user/create_user', tags=['USER'])
-async def create_user(user: UserCreateSchema, service: UserService = Depends(user_service)) -> dict | Error:
-    user: User = await service.add(
+async def create_user(
+        user: UserCreateSchema,
+        _user_service: UserService = Depends(user_service),
+        _user_info_service: UserAccountService = Depends(user_account_service)
+
+) -> dict | Error:
+    user: User = await _user_service.add(
         UserLogin(email=user.email, password=Hasher.get_password_hash(user.password)))
     if isinstance(user, Error):
         return user
+    await _user_info_service.add(id=user.id)
     return {'email': user.email, 'status': 'created'}
-
-
-@auth.post('/user/user_info', tags=['USER'])
-async def append_user_info(
-        info: UserAccountInfo,
-        _user_account_service: UserAccountService = Depends(user_account_service),
-        user: User = Depends(AuthDependency()),
-):
-    user_info = await _user_account_service.get(UserAccount.id == user.id)
-    if user_info:
-        return Response(f'{user.email}\'s account info already exists', status_code=400)
-    user_info = await _user_account_service.add(id=user.id, **info.model_dump())
-    return user_info
 
 
 @auth.put('/user/user_info/update', tags=['USER'])
@@ -104,7 +96,7 @@ async def update_user_info(
         _user_account_service: UserAccountService = Depends(user_account_service),
         user: User = Depends(AuthDependency()),
 ):
-    user_info = await _user_account_service.update(user.id, **info.model_dump())
+    user_info: UserAccount = await _user_account_service.update(user.id, **info.model_dump())
     return user_info
 
 

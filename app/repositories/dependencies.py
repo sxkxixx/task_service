@@ -1,6 +1,5 @@
 from repositories.services import (
     UserService,
-    SessionService,
     OfferService,
     UserAccountService,
     ExecutorService,
@@ -9,7 +8,6 @@ from repositories.services import (
 )
 from repositories.repositories import (
     UserRepository,
-    RefreshSessionRepository,
     OfferRepository,
     CategoryRepository,
     OfferTypeRepository,
@@ -21,10 +19,6 @@ from repositories.repositories import (
 
 def user_service() -> UserService:
     return UserService(UserRepository)
-
-
-def session_service() -> SessionService:
-    return SessionService(RefreshSessionRepository)
 
 
 def offer_service() -> OfferService:

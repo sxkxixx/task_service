@@ -1,14 +1,10 @@
 from repositories.base import DatabaseRepository
-from auth.models import User, RefreshSession, UserAccount
+from auth.models import User, UserAccount
 from offer.models import Offer, Category, OfferType, Executor, FileOffer
 
 
 class UserRepository(DatabaseRepository):
     _model = User
-
-
-class RefreshSessionRepository(DatabaseRepository):
-    _model = RefreshSession
 
 
 class OfferRepository(DatabaseRepository):

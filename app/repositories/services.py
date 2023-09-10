@@ -32,29 +32,6 @@ class UserService(Service):
         return await self.repository.get(*args)
 
 
-class SessionService(Service):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def get(self, *args):
-        return await self.repository.get(*args)
-
-    async def add(self, user, user_agent):
-        expires_in = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_TTL_DAYS)
-        token = await self.repository.add(
-            user_id=user.id,
-            user_agent=user_agent,
-            expires_in=expires_in.timestamp(),
-        )
-        return token
-
-    async def get_with_options(self, option, *args):
-        return await self.repository.get_with_options(option, *args)
-
-    async def delete(self, refresh_session):
-        await self.repository.delete(refresh_session)
-
-
 class OfferService(Service):
     async def get(self, *args):
         return await self.repository.get(*args)
@@ -92,6 +69,9 @@ class ReadOnlyService(Service):
 
     async def get(self, *args):
         return await self.repository.get(*args)
+
+    async def select(self, *args):
+        return await self.repository.select(*args)
 
     async def get_with_options(self, *args):
         return await self.repository.get(*args)
@@ -134,7 +114,7 @@ class ExecutorService(Service):
         await self.repository.delete(obj)
 
     async def get_with_options(self, option, *args):
-        return await self.repository.get(option, *args)
+        return await self.repository.get_with_options(option, *args)
 
     async def update(self, *args, **kwargs):
         res = await self.repository.update(*args, **kwargs)

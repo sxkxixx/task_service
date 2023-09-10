@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from core.database import Base
@@ -24,8 +25,11 @@ class UserAccount(Base):
     __tablename__ = 'user_account'
 
     id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
-    first_name: Mapped[str] = mapped_column(sqlalchemy.String(50))
-    patronymic: Mapped[str] = mapped_column(sqlalchemy.String(50))
-    surname: Mapped[str] = mapped_column(sqlalchemy.String(50))
+    first_name: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivan', nullable=False)
+    patronymic: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivanovich', nullable=False)
+    surname: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivanov', nullable=False)
+    sex: Mapped[str] = mapped_column(sqlalchemy.String(6), nullable=True)
+    birthday: Mapped[date] = mapped_column(sqlalchemy.Date, nullable=True)
+    bio: Mapped[str] = mapped_column(sqlalchemy.String(500), nullable=True)
     phone_number: Mapped[str] = mapped_column(sqlalchemy.String(16), nullable=True)
     tg_nickname: Mapped[str] = mapped_column(sqlalchemy.String(40), nullable=True)

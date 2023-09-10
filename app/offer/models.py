@@ -46,6 +46,9 @@ class Offer(Base, AsyncAttrs):
     executors: Mapped[List['Executor']] = relationship('Executor', back_populates='offer')
     user: Mapped['User'] = relationship('User', backref='offers')
 
+    def __repr__(self):
+        return f'Offer(id={self.id})'
+
 
 class FileOffer(Base):
     __tablename__ = 'offer_files'
