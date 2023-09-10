@@ -12,7 +12,6 @@ RUN python3 -m pip install poetry
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-root --no-interaction --no-ansi
 
-EXPOSE 80
 
 RUN alembic upgrade head
-RUN gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:80
+RUN gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
