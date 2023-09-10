@@ -1,14 +1,12 @@
+from offer.schemas import OfferSchema, OfferUpdate, FileSchema, OfferPublic, OfferPrivate
 from repositories.dependencies import offer_service, executor_service, file_service
 from repositories.services import OfferService, ExecutorService, FileService
-from offer.models import Offer, OfferType, Category, FileOffer, Executor
-from offer.schemas import OfferSchema, OfferUpdate, FileSchema, OfferPublic, OfferPrivate
+from offer.models import Offer, FileOffer, Executor
 from sqlalchemy.orm import selectinload
 from auth.hasher import AuthDependency
 from fastapi import Depends, Response
 from fastapi import APIRouter
-from sqlalchemy import or_
 from auth.models import User
-from typing import List
 
 offers_api = APIRouter(prefix='/api/v1')
 
@@ -71,7 +69,19 @@ async def get_offers(
 
 
 @offers_api.get('/offers/profile', tags=['OFFER'])
-async def get_user_offer(
+async def get_user_offers(
+        _type_id: str = None,
+        _offer_service: OfferService = Depends(offer_service),
+        user: User = Depends(AuthDependency())
+):
+    res = await _offer_service.select(
+        Offer.user_id == user.id, Offer.type_id == _type_id
+    )
+    return res
+
+
+@offers_api.get('/offers/approved', tags=['OFFER'])
+async def get_user_approved_offers(
         _type_id: str = None,
         _offer_service: OfferService = Depends(offer_service),
         user: User = Depends(AuthDependency())

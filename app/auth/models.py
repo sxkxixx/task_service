@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from core.database import Base
-from datetime import datetime
 from uuid import uuid4
 import sqlalchemy
 
@@ -14,7 +13,6 @@ class User(Base):
     password: Mapped[str] = mapped_column(sqlalchemy.String(length=150))
     is_verified: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
 
-    refresh_session = relationship('RefreshSession', back_populates='user')
     personal_data: Mapped['UserAccount'] = relationship('UserAccount', backref='personal_data')
     offer_executor = relationship('Executor', back_populates='user')
 
@@ -31,18 +29,3 @@ class UserAccount(Base):
     surname: Mapped[str] = mapped_column(sqlalchemy.String(50))
     phone_number: Mapped[str] = mapped_column(sqlalchemy.String(16), nullable=True)
     tg_nickname: Mapped[str] = mapped_column(sqlalchemy.String(40), nullable=True)
-
-
-class RefreshSession(Base):
-    __tablename__ = 'refresh_session'
-
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
-    user_agent: Mapped[str] = mapped_column(sqlalchemy.String(200))
-    expires_in: Mapped[int] = mapped_column(sqlalchemy.BigInteger)
-    created_at: Mapped[datetime] = mapped_column(sqlalchemy.DateTime(timezone=True), default=datetime.now)
-
-    user = relationship('User', back_populates='refresh_session')
-
-    def __repr__(self):
-        return f'RefreshSession(id={self.id}, user_id={self.user_id})'

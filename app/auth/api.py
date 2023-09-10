@@ -1,24 +1,14 @@
 from repositories.dependencies import user_service, session_service, user_account_service
 from repositories.services import UserService, SessionService, UserAccountService
-from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
 from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
 from auth.hasher import Token, Hasher, AuthDependency
-from auth.models import RefreshSession, UserAccount
-from sqlalchemy.orm import selectinload
-from datetime import datetime
+from auth.models import UserAccount
 from auth.models import User
 from typing import Annotated
+from auth.refresh_session import RefreshSession
 
 auth = APIRouter(prefix='/api/v1')
-
-
-@auth.post('/user/create_user', tags=['USER'])
-async def create_user(user: UserCreateSchema, service: UserService = Depends(user_service)) -> dict | Error:
-    user: User = await service.add(
-        UserLogin(email=user.email, password=Hasher.get_password_hash(user.password)))
-    if isinstance(user, Error):
-        return user
-    return {'email': user.email, 'status': 'created'}
 
 
 @auth.post('/auth/token', tags=['AUTH'])
@@ -27,7 +17,6 @@ async def get_token(
         response: Response,
         user_agent: Annotated[str, Header()],
         _user_service: UserService = Depends(user_service),
-        _session_service: SessionService = Depends(session_service)
 ):
     user: User = await _user_service.get(User.email == _user.email)
     if not user:
@@ -35,8 +24,14 @@ async def get_token(
     if not Hasher.is_correct_password(_user.password, user.password):
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
-    db_token: RefreshSession = await _session_service.add(user, user_agent)
-    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth', max_age=db_token.expires_in)
+    refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    await refresh_session.push_redis()
+    response.set_cookie(
+        'refresh_token',
+        refresh_session.get_refresh_id,
+        httponly=True,
+        path='/api/v1/auth',
+        max_age=refresh_session.expires_in)
     return access
 
 
@@ -45,19 +40,23 @@ async def _refresh_token(
         response: Response,
         user_agent: Annotated[str, Header()],
         refresh_token: Annotated[str, Cookie()] = None,
-        _session_service: SessionService = Depends(session_service)
+        _user_service: UserService = Depends(user_service),
 ):
-    refresh_session: RefreshSession = await _session_service.get_with_options(
-        selectinload(RefreshSession.user), RefreshSession.id == refresh_token)
-    if not refresh_session:
+    refresh_session: RefreshSession = await RefreshSession.get_session(refresh_token)
+    if not refresh_session or refresh_session.ua != user_agent:
         return Response("Redirect to /login page", status_code=302)
-    await _session_service.delete(refresh_session)
-    if datetime.fromtimestamp(refresh_session.expires_in) < datetime.utcnow() or refresh_session.user_agent != user_agent:
-        return Response("Redirect to /login page", status_code=302)
-    user = refresh_session.user
+    await refresh_session.delete()
+    user = await _user_service.get(User.id == refresh_session.user_id)
     access = Token.get_access_token(user)
-    db_token: RefreshSession = await _session_service.add(user, user_agent)
-    response.set_cookie('refresh_token', db_token.id, httponly=True, path='/api/v1/auth', expires=db_token.expires_in)
+    refresh_session: RefreshSession = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    await refresh_session.push_redis()
+    response.set_cookie(
+        'refresh_token',
+        refresh_session.get_refresh_id,
+        httponly=True,
+        path='/api/v1/auth',
+        expires=refresh_session.expires_in
+    )
     return access
 
 
@@ -69,12 +68,21 @@ async def logout(
         user: User = Depends(AuthDependency()),
         _session_service: SessionService = Depends(session_service)
 ):
-    session = await _session_service.get(RefreshSession.user_id == user.id,
-                                         RefreshSession.user_agent == user_agent,
-                                         RefreshSession.id == refresh_token)
+    refresh_session: RefreshSession = await RefreshSession.get_session(refresh_token)
+    if refresh_session.ua != user_agent or user.id != refresh_session.user_id:
+        return Response('Bad User-Agent and User for Refresh Session', status_code=400)
     response.delete_cookie('refresh_token')
-    await _session_service.delete(session)
+    await refresh_session.delete()
     return {'user': user.id, 'status': 'logged out'}
+
+
+@auth.post('/user/create_user', tags=['USER'])
+async def create_user(user: UserCreateSchema, service: UserService = Depends(user_service)) -> dict | Error:
+    user: User = await service.add(
+        UserLogin(email=user.email, password=Hasher.get_password_hash(user.password)))
+    if isinstance(user, Error):
+        return user
+    return {'email': user.email, 'status': 'created'}
 
 
 @auth.post('/user/user_info', tags=['USER'])

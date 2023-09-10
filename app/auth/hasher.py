@@ -8,7 +8,6 @@ from datetime import timedelta, datetime
 from typing import Literal, Annotated
 from jose import jwt, JWTError
 from auth.models import User
-from functools import wraps
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 

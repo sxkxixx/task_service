@@ -6,7 +6,7 @@ from core.database import Base
 from sqlalchemy import pool
 from alembic import context
 import asyncio
-from auth.models import User, RefreshSession, UserAccount
+from auth.models import User, UserAccount
 from offer.models import Category, Offer, OfferType, FileOffer
 
 # this is the Alembic Config object, which provides
