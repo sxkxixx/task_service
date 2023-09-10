@@ -15,4 +15,4 @@ RUN poetry install --no-root --no-interaction --no-ansi
 EXPOSE 8000
 
 RUN alembic upgrade head
-RUN gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000
+RUN gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:80
