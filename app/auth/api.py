@@ -24,14 +24,14 @@ async def get_token(
     if not Hasher.is_correct_password(_user.password, user.password):
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
-    # refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
-    # await refresh_session.push_redis()
-    # response.set_cookie(
-    #     'refresh_token',
-    #     refresh_session.get_refresh_id,
-    #     httponly=True,
-    #     path='/api/v1/auth',
-    #     max_age=refresh_session.expires_in)
+    refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    await refresh_session.push_redis()
+    response.set_cookie(
+        'refresh_token',
+        refresh_session.get_refresh_id,
+        httponly=True,
+        path='/api/v1/auth',
+        max_age=refresh_session.expires_in)
     return access
 
 
