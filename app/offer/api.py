@@ -209,6 +209,7 @@ async def delete_executor(
         user: User = Depends(AuthDependency()),
         _executor_service: ExecutorService = Depends(executor_service),
 ):
+    # TODO: Сам User может убрать себя как исполнителя + Offer.user_id удаляет executor'a
     executor = await _executor_service.get_with_options(
         [selectinload(Executor.offer)],
         Executor.id == executor_id, Offer.id == offer_id
