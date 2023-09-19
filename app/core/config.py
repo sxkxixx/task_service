@@ -13,7 +13,7 @@ SQL_PASSWORD: str = os.getenv('SQL_PASSWORD')
 
 # Auth
 SECRET_KEY: str = os.getenv('SECRET_KEY')
-ACCESS_TOKEN_TTL_MINUTES: int = 5
+ACCESS_TOKEN_TTL_MINUTES: int = 180
 REFRESH_TOKEN_TTL_DAYS: int = 60
 ALGORITHM: str = os.getenv('ALGORITHM')
 
@@ -28,6 +28,8 @@ REDIS_HOST = os.getenv('REDIS_HOST')
 REDIS_PORT = os.getenv('REDIS_PORT')
 REDIS_USER = os.getenv('REDIS_USER')
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
+
+REDIS_MESSAGE_CHANNEL = os.getenv('REDIS_PASSWORD') or 'msg'
 
 
 FILE_LINKS_DOMAIN = [

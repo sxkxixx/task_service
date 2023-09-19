@@ -4,7 +4,9 @@ from repositories.services import (
     UserAccountService,
     ExecutorService,
     ReadOnlyService,
-    FileService
+    FileService,
+    ChatService,
+    MessageService
 )
 from repositories.repositories import (
     UserRepository,
@@ -13,7 +15,9 @@ from repositories.repositories import (
     OfferTypeRepository,
     UserAccountRepository,
     ExecutorRepository,
-    FileRepository
+    FileRepository,
+    ChatRepository,
+    MessageRepository
 )
 
 
@@ -43,3 +47,11 @@ def executor_service() -> ExecutorService:
 
 def file_service() -> FileService:
     return FileService(FileRepository)
+
+
+def chat_service() -> ChatService:
+    return ChatService(ChatRepository)
+
+
+def message_service() -> MessageService:
+    return MessageService(MessageRepository)

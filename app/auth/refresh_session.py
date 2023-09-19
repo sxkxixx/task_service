@@ -1,9 +1,10 @@
-from typing import Annotated, Optional
 from core.config import REFRESH_TOKEN_TTL_DAYS
 from datetime import datetime, timedelta
+from typing import Annotated, Optional
+from aioredis.client import Pipeline
 from core.redis import redis_session
-from aioredis import Redis
 from uuid import uuid4, UUID
+from aioredis import Redis
 import json
 
 
@@ -32,7 +33,7 @@ class RefreshSession:
     async def push_redis(self, redis: Redis = redis_session()):
         json_str = self.__to_json_string()
         await redis.setex(f'refresh_session_{self.__id}', self.__ttl, json_str)
-        # refresh_session_0ee91329-6473-42b9-93c9-231a22d8790d
+        # refresh_session_a8349eaa-8d75-4db0-bc98-598deb6dbff6
         return self
 
     async def delete(self, redis: Redis = redis_session()):

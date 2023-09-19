@@ -25,6 +25,7 @@ asgi-lifespan = "^2.1.0"
 httpx = "^0.24.1"
 aioredis = "^2.0.1"
 gunicorn = "^21.2.0"
+sse-starlette = "^1.6.5"
 
 
 [build-system]

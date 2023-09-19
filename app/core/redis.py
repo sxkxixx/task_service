@@ -1,5 +1,5 @@
 import aioredis
-from core.config import REDIS_HOST, REDIS_PORT, REDIS_USER, REDIS_PASSWORD
+from core.config import REDIS_HOST, REDIS_PORT
 
 redis = aioredis.from_url(
     f'redis://{REDIS_HOST}:{REDIS_PORT}', encoding='utf-8',
