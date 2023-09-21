@@ -22,25 +22,29 @@ class MessageSchema(BaseModel):
 
     @classmethod
     @field_validator('content')
-    def length_validate(cls, field: str, info: FieldValidationInfo) -> str:
+    def validate_content_length(cls, field: str, info: FieldValidationInfo) -> str:
         if len(field) > 255:
             raise ValueError(f'{info.field_name} length must be at least 255 characters')
         return field
 
 
-class Notification:
-    def __init__(self, **kwargs):
-        self.event: Literal['message', 'service_notify'] = kwargs.get('event')
-        self.user_id: UUID = kwargs.get('user_id')
-        self.source: Optional[dict[str, Any]] = kwargs.get('source')
-        self.description: str = kwargs.get('description')
+class Notification(BaseModel):
+    event: Literal['message', 'service_notify']
+    retry: int
+    data: dict
+    user_id: UUID
+    source: Optional[dict[str, Any]]
+    description: Optional[str]
 
     def __str__(self):
         return json.dumps(
             {
                 'event': self.event,
                 'user_id': self.user_id,
-                'source': self.source,
-                'description': self.description,
+                'data': {
+                    'user_id': self.user_id,
+                    'source': self.source,
+                    'description': self.description
+                }
             }, default=str
         )

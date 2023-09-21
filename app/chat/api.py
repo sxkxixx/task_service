@@ -1,8 +1,9 @@
 from repositories.dependencies import chat_service, executor_service, message_service
 from repositories.services import ExecutorService, ChatService, MessageService
 from chat.schemas import ChatSchema, MessageSchema, Notification
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request
 from core.config import REDIS_MESSAGE_CHANNEL
+from chat.message_token import MessageToken
 from offer.models import Offer, Executor
 from sqlalchemy.orm import selectinload
 from auth.hasher import AuthDependency
@@ -11,6 +12,7 @@ from auth.models import User
 from chat.models import Chat
 from aioredis import Redis
 import sse_starlette
+import async_timeout
 
 chat_api = APIRouter(prefix='/api/v1')
 
@@ -82,21 +84,44 @@ async def post_message(
     )
     redis_message = Notification(
         event='message', user_id=recipient_id,
-        source={'chat_id': chat.id}, description=None
+        source={'chat_id': chat.id}, description=f'New message from {user.email}'
     )
     await redis.publish(
         f'{REDIS_MESSAGE_CHANNEL}:{recipient_id}',
-        redis_message.__str__(),
+        str(redis_message),
     )
     return message
 
 
+@chat_api.get('notification/token')
+async def get_message_token(
+        user: User = Depends(AuthDependency())
+):
+    message_token: MessageToken = MessageToken(user.id)
+    await message_token.push_redis()
+    return {'message_token': message_token.id}
+
+
 @chat_api.get('/notification/stream')
 async def sse_notification(
-        user: User = Depends(AuthDependency()),
+        token: str,
+        request: Request,
         redis: Redis = Depends(redis_session),
 ):
-    def func():
-        ...
+    user: User = await MessageToken.get(token)
+    if not user:
+        return Response('Message Token has expired', status_code=400)
+    pb = redis.pubsub()
+    await pb.subscribe(f'{REDIS_MESSAGE_CHANNEL}:{user.id}')
 
-    return sse_starlette.EventSourceResponse(func())
+    async def event_stream():
+        while True:
+            if await request.is_disconnected():
+                await pb.unsubscribe(f'{REDIS_MESSAGE_CHANNEL}:{user.id}')
+                break
+            async with async_timeout.timeout(10):
+                message: dict = await pb.get_message(ignore_subscribe_messages=True)
+                if message:
+                    yield message.get('data')
+
+    return sse_starlette.EventSourceResponse(event_stream())

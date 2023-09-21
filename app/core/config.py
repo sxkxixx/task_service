@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 import os
 
-
 load_dotenv()
 
 # Database
@@ -15,6 +14,7 @@ SQL_PASSWORD: str = os.getenv('SQL_PASSWORD')
 SECRET_KEY: str = os.getenv('SECRET_KEY')
 ACCESS_TOKEN_TTL_MINUTES: int = 180
 REFRESH_TOKEN_TTL_DAYS: int = 60
+MESSAGE_TOKEN_TTL_SECONDS: int = 5
 ALGORITHM: str = os.getenv('ALGORITHM')
 
 # S3 Storage
@@ -30,7 +30,8 @@ REDIS_USER = os.getenv('REDIS_USER')
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 
 REDIS_MESSAGE_CHANNEL = os.getenv('REDIS_PASSWORD') or 'msg'
-
+REFRESH_SESSION_KEY = os.getenv('REFRESH_SESSION_KEY') or 'refresh_session'
+MESSAGE_TOKEN_KEY = os.getenv('MESSAGE_TOKEN_KEY') or 'message_token'
 
 FILE_LINKS_DOMAIN = [
     'https://docs.google.com',
