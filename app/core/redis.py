@@ -12,11 +12,12 @@ def redis_session() -> aioredis.Redis:
 
 
 class RedisService(ABC):
-    # TODO: Переделать message_token & refresh_session под абстрактный класс
+    redis: aioredis.Redis = redis_session()
+
     @abstractmethod
-    def __init__(self, *args, **kwargs):
+    def push(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def push_redis(self, *args, **kwargs):
+    def get(self, *args, **kwargs):
         pass

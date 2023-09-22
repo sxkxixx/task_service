@@ -1,21 +1,21 @@
 from core.config import REFRESH_TOKEN_TTL_DAYS, REFRESH_SESSION_KEY
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
-from core.redis import redis_session
+from core.redis import RedisService
 from uuid import uuid4, UUID
-from aioredis import Redis
 import json
 
 
-class RefreshSession:
+class RefreshSession(RedisService):
     def __init__(
             self,
-            id: Optional[str],
+            _id: Optional[str],
             user_id: Annotated[UUID, str],
             user_agent: str,
             created_at: Optional[datetime],
     ):
-        self.__id = uuid4().__str__() if not id else id
+        super().__init__()
+        self.__id = uuid4().__str__() if not _id else _id
         self.__user_id = user_id.__str__()
         self.__user_agent = user_agent
         self.__created_at = datetime.utcnow() if not created_at else created_at
@@ -23,20 +23,20 @@ class RefreshSession:
 
     def __to_json_string(self):
         return json.dumps({
-            'id': self.__id,
+            '_id': self.__id,
             'user_id': self.__user_id,
             'user_agent': self.__user_agent,
             'created_at': self.__created_at,
         }, default=str)
 
-    async def push_redis(self, redis: Redis = redis_session()):
+    async def push(self):
         json_str = self.__to_json_string()
-        await redis.setex(f'{REFRESH_SESSION_KEY}_{self.__id}', self.__ttl, json_str)
+        await self.redis.setex(f'{REFRESH_SESSION_KEY}_{self.__id}', self.__ttl, json_str)
         # refresh_session_a8349eaa-8d75-4db0-bc98-598deb6dbff6
         return self
 
-    async def delete(self, redis: Redis = redis_session()):
-        await redis.delete(f'{REFRESH_SESSION_KEY}_{self.__id}')
+    async def delete(self):
+        await self.redis.delete(f'{REFRESH_SESSION_KEY}_{self.__id}')
 
     @property
     def get_refresh_id(self):
@@ -55,8 +55,8 @@ class RefreshSession:
         return self.__user_id
 
     @classmethod
-    async def get_session(cls, refresh_session_id: str, redis: Redis = redis_session()):
-        rs_json = await redis.get(f'{REFRESH_SESSION_KEY}_{refresh_session_id}')
+    async def get(cls, refresh_session_id: str):
+        rs_json = await cls.redis.get(f'{REFRESH_SESSION_KEY}_{refresh_session_id}')
         if rs_json is None:
             return None
         refresh_session = json.loads(rs_json)

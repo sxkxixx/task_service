@@ -24,8 +24,8 @@ async def get_token(
     if not Hasher.is_correct_password(_user.password, user.password):
         raise HTTPException(status_code=403, detail='Incorrect password for user')
     access = Token.get_access_token(user)
-    refresh_session = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
-    await refresh_session.push_redis()
+    refresh_session = RefreshSession(_id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    await refresh_session.push()
     response.set_cookie(
         'refresh_token',
         refresh_session.get_refresh_id,
@@ -42,14 +42,14 @@ async def _refresh_token(
         refresh_token: Annotated[str, Cookie()] = None,
         _user_service: UserService = Depends(user_service),
 ):
-    refresh_session: RefreshSession = await RefreshSession.get_session(refresh_token)
+    refresh_session: RefreshSession = await RefreshSession.get(refresh_token)
     if not refresh_session or refresh_session.ua != user_agent:
         return Response("Redirect to /login page", status_code=302)
     await refresh_session.delete()
     user = await _user_service.get(User.id == refresh_session.user_id)
     access = Token.get_access_token(user)
-    refresh_session: RefreshSession = RefreshSession(id=None, user_id=user.id, user_agent=user_agent, created_at=None)
-    await refresh_session.push_redis()
+    refresh_session: RefreshSession = RefreshSession(_id=None, user_id=user.id, user_agent=user_agent, created_at=None)
+    await refresh_session.push()
     response.set_cookie(
         'refresh_token',
         refresh_session.get_refresh_id,
@@ -67,7 +67,7 @@ async def logout(
         refresh_token: Annotated[str, Cookie()] = None,
         user: User = Depends(AuthDependency()),
 ):
-    refresh_session: RefreshSession = await RefreshSession.get_session(refresh_token)
+    refresh_session: RefreshSession = await RefreshSession.get(refresh_token)
     if refresh_session.ua != user_agent or user.id != refresh_session.user_id:
         return Response('Bad User-Agent and User for Refresh Session', status_code=400)
     response.delete_cookie('refresh_token')

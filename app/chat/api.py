@@ -93,12 +93,12 @@ async def post_message(
     return message
 
 
-@chat_api.get('notification/token')
+@chat_api.get('/notification/token')
 async def get_message_token(
         user: User = Depends(AuthDependency())
 ):
-    message_token: MessageToken = MessageToken(user.id)
-    await message_token.push_redis()
+    message_token: MessageToken = MessageToken(user_id=user.id.__str__())
+    await message_token.push()
     return {'message_token': message_token.id}
 
 
@@ -108,9 +108,11 @@ async def sse_notification(
         request: Request,
         redis: Redis = Depends(redis_session),
 ):
-    user: User = await MessageToken.get(token)
-    if not user:
+    try:
+        message_token: MessageToken = await MessageToken.get(token)
+    except ValueError:
         return Response('Message Token has expired', status_code=400)
+    user: User = await message_token.user
     pb = redis.pubsub()
     await pb.subscribe(f'{REDIS_MESSAGE_CHANNEL}:{user.id}')
 
