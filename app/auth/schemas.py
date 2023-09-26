@@ -1,8 +1,7 @@
+from pydantic import BaseModel, EmailStr, field_validator, FieldValidationInfo
 from typing import Optional, Literal
 from datetime import date, datetime
 from uuid import UUID
-
-from pydantic import BaseModel, EmailStr, model_validator, field_validator, FieldValidationInfo
 import re
 
 
@@ -14,13 +13,12 @@ class UserLogin(BaseModel):
 class UserRead(BaseModel):
     id: UUID
     email: Optional[EmailStr]
-    personal_data: Optional['UserAccountInfo']
+    personal_data: Optional['PersonalDataSchema']
 
 
 class UserCreateSchema(BaseModel):
     email: EmailStr
     password: str
-    password_repeat: str
 
     @classmethod
     @field_validator('password', 'password_repeat')
@@ -29,11 +27,10 @@ class UserCreateSchema(BaseModel):
             raise ValueError(f'{info.field_name} length must be at least 8 characters')
         return field
 
-    @model_validator(mode='after')
-    def validate_passwords(self) -> 'UserCreateSchema':
-        if self.password != self.password_repeat:
-            raise ValueError('passwords do not match')
-        return self
+    @classmethod
+    @field_validator('email')
+    def validate_email(cls, field: str, info: FieldValidationInfo):
+        return field.strip().lower()
 
 
 class Error(BaseModel):
@@ -48,7 +45,7 @@ class RefreshSessionSchema(BaseModel):
     created_at: Optional[datetime]
 
 
-class UserAccountInfo(BaseModel):
+class PersonalDataSchema(BaseModel):
     first_name: Optional[str]
     patronymic: Optional[str]
     surname: Optional[str]
@@ -64,3 +61,12 @@ class UserAccountInfo(BaseModel):
         if re.match('^\\+?[1-9][0-9]{7,14}$', phone):
             return phone
         raise ValueError(f'{info.field_name} must be a correct phone number')
+
+    @classmethod
+    @field_validator('tg_nickname')
+    def validate_telegram_nickname(cls, field: str, info: FieldValidationInfo):
+        if not field:
+            return field
+        if not field.startswith('@'):
+            return ValueError(f'{info.field_name} must be starts with a "@"')
+        return field

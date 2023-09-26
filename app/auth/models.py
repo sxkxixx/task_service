@@ -14,20 +14,20 @@ class User(Base):
     password: Mapped[str] = mapped_column(sqlalchemy.String(length=150))
     is_verified: Mapped[bool] = mapped_column(sqlalchemy.Boolean, default=False)
 
-    personal_data: Mapped['UserAccount'] = relationship('UserAccount', backref='personal_data')
+    personal_data: Mapped['PersonalData'] = relationship('PersonalData', backref='personal_data')
     offer_executor = relationship('Executor', back_populates='user')
 
     def __repr__(self):
         return f'User(id={self.id}, email={self.email})'
 
 
-class UserAccount(Base):
-    __tablename__ = 'user_account'
+class PersonalData(Base):
+    __tablename__ = 'personal_data'
 
     id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
-    first_name: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivan', nullable=False)
-    patronymic: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivanovich', nullable=False)
-    surname: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Ivanov', nullable=False)
+    first_name: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Unmarked', nullable=False)
+    patronymic: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Unmarked', nullable=False)
+    surname: Mapped[str] = mapped_column(sqlalchemy.String(50), default='Unmarked', nullable=False)
     sex: Mapped[str] = mapped_column(sqlalchemy.String(6), nullable=True)
     birthday: Mapped[date] = mapped_column(sqlalchemy.Date, nullable=True)
     bio: Mapped[str] = mapped_column(sqlalchemy.String(500), nullable=True)

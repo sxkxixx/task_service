@@ -1,5 +1,5 @@
 from repositories.base import DatabaseRepository
-from auth.models import User, UserAccount
+from auth.models import User, PersonalData
 from offer.models import Offer, Category, OfferType, Executor, FileOffer
 from chat.models import Chat, Message
 
@@ -20,8 +20,8 @@ class OfferTypeRepository(DatabaseRepository):
     _model = OfferType
 
 
-class UserAccountRepository(DatabaseRepository):
-    _model = UserAccount
+class PersonalDataRepository(DatabaseRepository):
+    _model = PersonalData
 
 
 class ExecutorRepository(DatabaseRepository):

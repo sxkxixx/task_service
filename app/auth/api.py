@@ -1,12 +1,14 @@
-from repositories.dependencies import user_service, user_account_service
-from repositories.services import UserService, UserAccountService
+from auth.schemas import UserCreateSchema, UserLogin, Error, PersonalDataSchema, UserRead
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Cookie
-from auth.schemas import UserCreateSchema, UserLogin, Error, UserAccountInfo
+from repositories.dependencies import user_service, user_account_service
+from repositories.services import UserService, PersonalDataService
 from auth.hasher import Token, Hasher, AuthDependency
-from auth.models import UserAccount
+from auth.refresh_session import RefreshSession
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
+from auth.models import PersonalData
 from auth.models import User
 from typing import Annotated
-from auth.refresh_session import RefreshSession
 
 auth = APIRouter(prefix='/api/v1')
 
@@ -31,7 +33,9 @@ async def get_token(
         refresh_session.get_refresh_id,
         httponly=True,
         path='/api/v1/auth',
-        max_age=refresh_session.expires_in)
+        max_age=refresh_session.expires_in,
+        expires=refresh_session.expires_in
+    )
     return access
 
 
@@ -55,6 +59,7 @@ async def _refresh_token(
         refresh_session.get_refresh_id,
         httponly=True,
         path='/api/v1/auth',
+        max_age=refresh_session.expires_in,
         expires=refresh_session.expires_in
     )
     return access
@@ -68,42 +73,45 @@ async def logout(
         user: User = Depends(AuthDependency()),
 ):
     refresh_session: RefreshSession = await RefreshSession.get(refresh_token)
-    if refresh_session.ua != user_agent or user.id != refresh_session.user_id:
+
+    if refresh_session.ua != user_agent or user.id.__str__() != refresh_session.user_id:
         return Response('Bad User-Agent and User for Refresh Session', status_code=400)
     response.delete_cookie('refresh_token')
     await refresh_session.delete()
     return {'user': user.id, 'status': 'logged out'}
 
 
-@auth.post('/user/create_user', tags=['USER'])
+@auth.post('/user', tags=['USER'],)
 async def create_user(
-        user: UserCreateSchema,
+        _user: UserCreateSchema,
         _user_service: UserService = Depends(user_service),
-        _user_info_service: UserAccountService = Depends(user_account_service)
+        _user_info_service: PersonalDataService = Depends(user_account_service)
 
-) -> dict | Error:
-    user: User = await _user_service.add(
-        UserLogin(email=user.email, password=Hasher.get_password_hash(user.password)))
-    if isinstance(user, Error):
-        return user
-    await _user_info_service.add(id=user.id)
-    return {'email': user.email, 'status': 'created'}
-
-
-@auth.put('/user/user_info/update', tags=['USER'])
-async def update_user_info(
-        info: UserAccountInfo,
-        _user_account_service: UserAccountService = Depends(user_account_service),
-        user: User = Depends(AuthDependency()),
 ):
-    user_info: UserAccount = await _user_account_service.update(user.id, **info.model_dump())
-    return user_info
+    try:
+        user: User = await _user_service.add(
+            email=_user.email,
+            password=Hasher.get_password_hash(_user.password))
+    except IntegrityError:
+        return JSONResponse(Error(field_name='email', exception='Email field must\'be unique for User').model_dump(), status_code=400)
+    await _user_info_service.add(id=user.id)
+    return UserRead(id=user.id, email=user.email, personal_data=None)
 
 
-@auth.delete('/user/delete_user', tags=['USER'])
+@auth.delete('/user', tags=['USER'])
 async def delete_user(
         user: User = Depends(AuthDependency()),
         _user_service: UserService = Depends(user_service)
 ):
     await _user_service.delete(user)
     return {'id': user.id, 'status': 'deleted'}
+
+
+@auth.put('/user/personal_data', tags=['USER'])
+async def update_personal_data(
+        info: PersonalDataSchema,
+        _user_account_service: PersonalDataService = Depends(user_account_service),
+        user: User = Depends(AuthDependency()),
+):
+    user_info: PersonalData = await _user_account_service.update(User.id == user.id, **info.model_dump())
+    return user_info

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator, FieldValidationInfo
 from datetime import datetime
 from typing import Optional, List
-from auth.schemas import UserRead, UserAccountInfo
+from auth.schemas import UserRead, PersonalDataSchema
 from uuid import UUID
 from core.config import FILE_LINKS_DOMAIN
 

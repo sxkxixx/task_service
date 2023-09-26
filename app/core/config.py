@@ -10,8 +10,6 @@ POSTGRES_PORT: int = int(os.getenv('POSTGRES_PORT'))
 POSTGRES_USER: str = os.getenv('POSTGRES_USER')
 POSTGRES_PASSWORD: str = os.getenv('POSTGRES_PASSWORD')
 
-print(POSTGRES_HOST, POSTGRES_PORT)
-
 # Auth
 SECRET_KEY: str = os.getenv('SECRET_KEY')
 ACCESS_TOKEN_TTL_MINUTES: int = 180

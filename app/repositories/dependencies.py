@@ -1,7 +1,7 @@
 from repositories.services import (
     UserService,
     OfferService,
-    UserAccountService,
+    PersonalDataService,
     ExecutorService,
     ReadOnlyService,
     FileService,
@@ -13,7 +13,7 @@ from repositories.repositories import (
     OfferRepository,
     CategoryRepository,
     OfferTypeRepository,
-    UserAccountRepository,
+    PersonalDataRepository,
     ExecutorRepository,
     FileRepository,
     ChatRepository,
@@ -37,8 +37,8 @@ def offer_type_service() -> ReadOnlyService:
     return ReadOnlyService(OfferTypeRepository)
 
 
-def user_account_service() -> UserAccountService:
-    return UserAccountService(UserAccountRepository)
+def user_account_service() -> PersonalDataService:
+    return PersonalDataService(PersonalDataRepository)
 
 
 def executor_service() -> ExecutorService:

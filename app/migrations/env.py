@@ -1,4 +1,4 @@
-from core.config import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, SQL_DATABASE
+from core.config import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.engine import Connection
 from logging.config import fileConfig
@@ -6,7 +6,7 @@ from core.database import Base
 from sqlalchemy import pool
 from alembic import context
 import asyncio
-from auth.models import User, UserAccount, PasswordUpdate
+from auth.models import User, PersonalData, PasswordUpdate
 from offer.models import Category, Offer, OfferType, FileOffer
 from chat.models import Message, Chat
 
@@ -15,7 +15,7 @@ from chat.models import Message, Chat
 config = context.config
 section = config.config_ini_section
 
-config.set_section_option(section, 'SQL_DATABASE', SQL_DATABASE)
+config.set_section_option(section, 'POSTGRES_DB', POSTGRES_DB)
 config.set_section_option(section, 'POSTGRES_HOST', POSTGRES_HOST)
 config.set_section_option(section, 'POSTGRES_PORT', str(POSTGRES_PORT))
 config.set_section_option(section, 'POSTGRES_USER', POSTGRES_USER)

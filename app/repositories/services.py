@@ -1,9 +1,6 @@
-from pydantic import BaseModel
 from auth.schemas import Error
 from repositories.base import BaseRepository
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta
-from core.config import REFRESH_TOKEN_TTL_DAYS
 
 
 class Service:
@@ -15,11 +12,8 @@ class UserService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def add(self, model):
-        try:
-            user = await self.repository.add(**model.model_dump())
-        except IntegrityError:
-            return Error(field_name='email', exception='User with current email already exists')
+    async def add(self, **kwargs):
+        user = await self.repository.add(**kwargs)
         return user
 
     async def get_with_options(self, option, *args):
@@ -77,7 +71,7 @@ class ReadOnlyService(Service):
         return await self.repository.get(*args)
 
 
-class UserAccountService(Service):
+class PersonalDataService(Service):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
