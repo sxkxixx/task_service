@@ -4,11 +4,13 @@ import os
 load_dotenv()
 
 # Database
-SQL_DATABASE: str = os.getenv('SQL_DATABASE')
-SQL_HOST: str = os.getenv('SQL_HOST')
-SQL_PORT: int = int(os.getenv('SQL_PORT'))
-SQL_USER: str = os.getenv('SQL_USER')
-SQL_PASSWORD: str = os.getenv('SQL_PASSWORD')
+POSTGRES_DB: str = os.getenv('POSTGRES_DB')
+POSTGRES_HOST: str = os.getenv('POSTGRES_HOST')
+POSTGRES_PORT: int = int(os.getenv('POSTGRES_PORT'))
+POSTGRES_USER: str = os.getenv('POSTGRES_USER')
+POSTGRES_PASSWORD: str = os.getenv('POSTGRES_PASSWORD')
+
+print(POSTGRES_HOST, POSTGRES_PORT)
 
 # Auth
 SECRET_KEY: str = os.getenv('SECRET_KEY')
@@ -32,6 +34,10 @@ REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 REDIS_MESSAGE_CHANNEL = os.getenv('REDIS_PASSWORD') or 'msg'
 REFRESH_SESSION_KEY = os.getenv('REFRESH_SESSION_KEY') or 'refresh_session'
 MESSAGE_TOKEN_KEY = os.getenv('MESSAGE_TOKEN_KEY') or 'message_token'
+
+SMTP_EMAIL: str = os.getenv('SMTP_EMAIL')
+SMTP_PASSWORD: str = os.getenv('SMTP_PASSWORD')
+SMTP_SERVER: str = os.getenv('SMTP_SERVER')
 
 FILE_LINKS_DOMAIN = [
     'https://docs.google.com',
