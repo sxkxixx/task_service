@@ -41,8 +41,8 @@ class Token:
 
 
 class AuthDependency:
-    def __init__(self, is_strict=True):
-        self.is_strict = is_strict
+    def __init__(self, is_strict: bool = True):
+        self.is_strict: bool = is_strict
         self.service: UserService = user_service()
 
     async def __call__(self, authorization: Annotated[str, Header()] = None):
@@ -65,7 +65,7 @@ class AuthDependency:
             return Response('Unauthorized', status_code=401)
         return user
 
-    async def __soft_auth(self, authorization: str):
+    async def __soft_auth(self, authorization: str | None):
         try:
             return await self.__strict_auth(authorization)
         except HTTPException:

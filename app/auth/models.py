@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from core.database import Base
@@ -33,3 +33,13 @@ class UserAccount(Base):
     bio: Mapped[str] = mapped_column(sqlalchemy.String(500), nullable=True)
     phone_number: Mapped[str] = mapped_column(sqlalchemy.String(16), nullable=True)
     tg_nickname: Mapped[str] = mapped_column(sqlalchemy.String(40), nullable=True)
+
+
+class PasswordUpdate(Base):
+    __tablename__ = 'password_upd_token'
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), default=uuid4,  primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
+    previous_password: Mapped[str] = mapped_column(sqlalchemy.String(length=150), nullable=False)
+    current_password: Mapped[str] = mapped_column(sqlalchemy.String(length=150), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(sqlalchemy.DateTime, nullable=True)

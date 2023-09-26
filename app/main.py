@@ -2,25 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from auth.api import auth
 from offer.api import offers_api
+from chat.api import chat_api
+
 
 app = FastAPI()
 app.include_router(auth)
 app.include_router(offers_api)
+app.include_router(chat_api)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[],
+    allow_origins=['http://127.0.0.1:3000', 'http://localhost:3000', 'http://localhost:63342'],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
 )
-
-
-@app.on_event('startup')
-async def startup():
-    pass
-
-
-@app.on_event('shutdown')
-async def shutdown():
-    pass

@@ -1,4 +1,4 @@
-from core.config import SQL_HOST, SQL_PORT, SQL_USER, SQL_PASSWORD, SQL_DATABASE
+from core.config import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, SQL_DATABASE
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.engine import Connection
 from logging.config import fileConfig
@@ -6,8 +6,9 @@ from core.database import Base
 from sqlalchemy import pool
 from alembic import context
 import asyncio
-from auth.models import User, UserAccount
+from auth.models import User, UserAccount, PasswordUpdate
 from offer.models import Category, Offer, OfferType, FileOffer
+from chat.models import Message, Chat
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -15,10 +16,10 @@ config = context.config
 section = config.config_ini_section
 
 config.set_section_option(section, 'SQL_DATABASE', SQL_DATABASE)
-config.set_section_option(section, 'SQL_HOST', SQL_HOST)
-config.set_section_option(section, 'SQL_PORT', str(SQL_PORT))
-config.set_section_option(section, 'SQL_USER', SQL_USER)
-config.set_section_option(section, 'SQL_PASSWORD', SQL_PASSWORD)
+config.set_section_option(section, 'POSTGRES_HOST', POSTGRES_HOST)
+config.set_section_option(section, 'POSTGRES_PORT', str(POSTGRES_PORT))
+config.set_section_option(section, 'POSTGRES_USER', POSTGRES_USER)
+config.set_section_option(section, 'POSTGRES_PASSWORD', POSTGRES_PASSWORD)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

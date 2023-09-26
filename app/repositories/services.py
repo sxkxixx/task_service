@@ -140,3 +140,29 @@ class FileService(Service):
 
     async def get_with_options(self, option, *args):
         return await self.repository.get_with_options(option, *args)
+
+
+class ChatService(Service):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def get(self, *args):
+        return await self.repository.get(*args)
+
+    async def add(self, **kwargs):
+        return await self.repository.add(**kwargs)
+
+    async def get_with_options(self, option, *args):
+        return await self.repository.get_with_options(option, *args)
+
+    async def delete(self, obj):
+        await self.repository.delete(obj)
+
+
+class MessageService(Service):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def add(self, **kwargs):
+        return await self.repository.add(**kwargs)
+
