@@ -1,13 +1,4 @@
-from repositories.services import (
-    UserService,
-    OfferService,
-    PersonalDataService,
-    ExecutorService,
-    ReadOnlyService,
-    FileService,
-    ChatService,
-    MessageService
-)
+from repositories.services import Service
 from repositories.repositories import (
     UserRepository,
     OfferRepository,
@@ -17,41 +8,45 @@ from repositories.repositories import (
     ExecutorRepository,
     FileRepository,
     ChatRepository,
-    MessageRepository
+    MessageRepository, UserVerifyRepository
 )
 
 
-def user_service() -> UserService:
-    return UserService(UserRepository)
+def user_service() -> Service:
+    return Service(UserRepository)
 
 
-def offer_service() -> OfferService:
-    return OfferService(OfferRepository)
+def offer_service() -> Service:
+    return Service(OfferRepository)
 
 
-def category_service() -> ReadOnlyService:
-    return ReadOnlyService(CategoryRepository)
+def category_service() -> Service:
+    return Service(CategoryRepository)
 
 
-def offer_type_service() -> ReadOnlyService:
-    return ReadOnlyService(OfferTypeRepository)
+def offer_type_service() -> Service:
+    return Service(OfferTypeRepository)
 
 
-def user_account_service() -> PersonalDataService:
-    return PersonalDataService(PersonalDataRepository)
+def personal_data_service() -> Service:
+    return Service(PersonalDataRepository)
 
 
-def executor_service() -> ExecutorService:
-    return ExecutorService(ExecutorRepository)
+def executor_service() -> Service:
+    return Service(ExecutorRepository)
 
 
-def file_service() -> FileService:
-    return FileService(FileRepository)
+def file_service() -> Service:
+    return Service(FileRepository)
 
 
-def chat_service() -> ChatService:
-    return ChatService(ChatRepository)
+def chat_service() -> Service:
+    return Service(ChatRepository)
 
 
-def message_service() -> MessageService:
-    return MessageService(MessageRepository)
+def message_service() -> Service:
+    return Service(MessageRepository)
+
+
+def user_verify_service() -> Service:
+    return Service(UserVerifyRepository)

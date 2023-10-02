@@ -1,6 +1,6 @@
-from core.config import ACCESS_TOKEN_TTL_MINUTES, REFRESH_TOKEN_TTL_DAYS
-from fastapi import Header, Response, Depends, HTTPException
-from repositories.services import Service, UserService
+from core.config import ACCESS_TOKEN_TTL_MINUTES
+from fastapi import Header, Response, HTTPException
+from repositories.services import Service
 from repositories.dependencies import user_service
 from core.config import SECRET_KEY, ALGORITHM
 from passlib.context import CryptContext
@@ -43,7 +43,7 @@ class Token:
 class AuthDependency:
     def __init__(self, is_strict: bool = True):
         self.is_strict: bool = is_strict
-        self.service: UserService = user_service()
+        self.service: Service = user_service()
 
     async def __call__(self, authorization: Annotated[str, Header()] = None):
         if self.is_strict:

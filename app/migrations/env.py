@@ -6,7 +6,7 @@ from core.database import Base
 from sqlalchemy import pool
 from alembic import context
 import asyncio
-from auth.models import User, PersonalData, PasswordUpdate
+from auth.models import User, PersonalData, PasswordUpdate, UserVerifyInfo
 from offer.models import Category, Offer, OfferType, FileOffer
 from chat.models import Message, Chat
 

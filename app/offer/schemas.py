@@ -7,10 +7,10 @@ from core.config import FILE_LINKS_DOMAIN
 
 
 class OfferSchema(BaseModel):
-    title: str = 'Order\'s name'
-    description: str = 'Order\'s description'
-    category_id: str = 'Order\'s category id'
-    type_id: str = 'Order\'s type id'
+    title: str = 'Offer\'s name'
+    description: str = 'Offer\'s description'
+    category_id: str = 'Offer\'s category id'
+    type_id: str = 'Offer\'s type id'
     deadline: Optional[datetime]
     is_anonymous: bool = False
 
@@ -35,6 +35,8 @@ class OfferInternal(BaseModel):
     deadline: datetime
     created_at: datetime
 
+    files: Optional[List['FileRead']]
+
 
 class OfferPublic(OfferInternal):
     user: Optional[UserRead]
@@ -55,18 +57,19 @@ class OfferPublic(OfferInternal):
             user=UserRead(
                 id=offer.user.id,
                 email=offer.user.email,
-                personal_data=UserAccountInfo(
+                personal_data=PersonalDataSchema(
                     first_name=offer.user.personal_data.first_name,
                     patronymic=offer.user.personal_data.patronymic,
-                    surname=offer.user.personal_data.surname
+                    surname=offer.user.personal_data.surname,
+                    tg_nickname=offer.user.personal_data.tg_nickname
                 ) if offer.user.personal_data else None
-            ) if not offer.is_anonymous else None
+            ) if not offer.is_anonymous else None,
+            files=[FileRead.file_view(file) for file in offer.files]
         )
 
 
 class OfferPrivate(OfferInternal):
     executors: List['ExecutorInternal']
-    files: List['FileRead']
 
     @classmethod
     def offer_private_view(cls, offer):
@@ -91,10 +94,12 @@ class OfferPrivate(OfferInternal):
                     user=UserRead(
                         id=executor.user.id,
                         email=executor.user.email,
-                        personal_data=UserAccountInfo(
+                        personal_data=PersonalDataSchema(
                             first_name=executor.user.personal_data.first_name,
                             patronymic=executor.user.personal_data.patronymic,
                             surname=executor.user.personal_data.surname,
+                            bio=executor.user.personal_data.bio,
+                            tg_nickname=executor.user.personal_data.tg_nickname
                         ) if executor.user.personal_data else None,
                     )
                 ) for executor in offer.executors
@@ -112,7 +117,7 @@ class ExecutorInternal(BaseModel):
 
 class FileSchema(BaseModel):
     description: Optional[str]
-    link: str
+    link: Optional[str]
 
     @classmethod
     @field_validator('description')

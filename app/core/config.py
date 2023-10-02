@@ -36,6 +36,9 @@ MESSAGE_TOKEN_KEY = os.getenv('MESSAGE_TOKEN_KEY') or 'message_token'
 SMTP_EMAIL: str = os.getenv('SMTP_EMAIL')
 SMTP_PASSWORD: str = os.getenv('SMTP_PASSWORD')
 SMTP_SERVER: str = os.getenv('SMTP_SERVER')
+SMTP_PORT: int = int(os.getenv('SMTP_PORT'))
+
+ORIGIN = 'http://localhost:8000'
 
 FILE_LINKS_DOMAIN = [
     'https://docs.google.com',

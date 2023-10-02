@@ -1,9 +1,9 @@
 from repositories.dependencies import chat_service, executor_service, message_service
-from repositories.services import ExecutorService, ChatService, MessageService
 from chat.schemas import ChatSchema, MessageSchema, Notification
 from fastapi import APIRouter, Depends, Response, Request
 from core.config import REDIS_MESSAGE_CHANNEL
 from chat.message_token import MessageToken
+from repositories.services import Service
 from offer.models import Offer, Executor
 from sqlalchemy.orm import selectinload
 from auth.hasher import AuthDependency
@@ -17,12 +17,12 @@ import async_timeout
 chat_api = APIRouter(prefix='/api/v1')
 
 
-@chat_api.post('/chat')
+@chat_api.post('/chat', tags=['CHAT'])
 async def create_chat(
         _chat: ChatSchema,
         user: User = Depends(AuthDependency()),
-        _executor_service: ExecutorService = Depends(executor_service),
-        _chat_service: ChatService = Depends(chat_service)
+        _executor_service: Service = Depends(executor_service),
+        _chat_service: Service = Depends(chat_service)
 ):
     executor = await _executor_service.get_with_options(
         selectinload(Executor.offer),
@@ -43,11 +43,11 @@ async def create_chat(
     return chat
 
 
-@chat_api.delete('/chat/{chat_id}/delete')
+@chat_api.delete('/chat/{chat_id}', tags=['CHAT'])
 async def delete_chat(
         chat_id: str,
         user: User = Depends(AuthDependency()),
-        _chat_service: ChatService = Depends(chat_service)
+        _chat_service: Service = Depends(chat_service)
 ):
     chat = await _chat_service.get_with_options(selectinload(Chat.offer), Chat.id == chat_id)
     if not chat:
@@ -59,13 +59,13 @@ async def delete_chat(
     return {'id': chat.id, 'status': 'deleted'}
 
 
-@chat_api.post('/chat/{chat_id}/message')
+@chat_api.post('/chat/{chat_id}/msg', tags=['CHAT+MESSAGE'])
 async def post_message(
         chat_id: str,
         _message: MessageSchema,
         user: User = Depends(AuthDependency()),
-        _chat_service: ChatService = Depends(chat_service),
-        _message_service: MessageService = Depends(message_service),
+        _chat_service: Service = Depends(chat_service),
+        _message_service: Service = Depends(message_service),
         redis: Redis = Depends(redis_session)
 ):
     chat = await _chat_service.get_with_options(

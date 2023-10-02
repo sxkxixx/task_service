@@ -49,10 +49,10 @@ class PersonalDataSchema(BaseModel):
     first_name: Optional[str]
     patronymic: Optional[str]
     surname: Optional[str]
-    sex: Optional[Literal['male', 'female']] = "'male' or 'female'"
-    birthday: Optional[date]
-    bio: Optional[str]
-    phone_number: Optional[str]
+    sex: Optional[Literal['male', 'female']] = None
+    birthday: Optional[date] = None
+    bio: Optional[str] = None
+    phone_number: Optional[str] = None
     tg_nickname: Optional[str]
 
     @classmethod

@@ -55,7 +55,7 @@ class FileOffer(Base):
 
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     offer_id: Mapped[UUID] = mapped_column(sqlalchemy.ForeignKey('offers.id', ondelete='CASCADE'))
-    link: Mapped[str] = mapped_column(sqlalchemy.String(150), unique=True, nullable=False)
+    link: Mapped[str] = mapped_column(sqlalchemy.String(150), nullable=False)
     description: Mapped[str] = mapped_column(sqlalchemy.String(255), nullable=True)
 
     offer: Mapped['Offer'] = relationship('Offer', backref='files')

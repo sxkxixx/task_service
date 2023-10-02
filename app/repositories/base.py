@@ -83,7 +83,7 @@ class DatabaseRepository(BaseRepository):
     @classmethod
     async def get_with_options(cls, load_options, *args):
         async with async_session() as session:
-            statement = select(cls._model).where(*args).options(*load_options if isinstance(load_options, list) else load_options)
+            statement = select(cls._model).where(*args).options(*load_options)
             res = await session.scalar(statement)
             return res
 
