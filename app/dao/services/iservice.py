@@ -1,9 +1,10 @@
-from repositories.base import BaseRepository
+from typing import Type
+from dao.repositories import BaseRepository
 
 
-class Service:
-    def __init__(self, repository: BaseRepository):
-        self.repository: BaseRepository = repository
+class BaseService:
+    def __init__(self, repository: Type[BaseRepository]):
+        self.repository: Type[BaseRepository] = repository
 
     async def add(self, **kwargs):
         return await self.repository.add(**kwargs)

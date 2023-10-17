@@ -1,12 +1,11 @@
-from repositories.dependencies import chat_service, executor_service, message_service
+from dao import chat_service, executor_service, message_service, BaseService
 from chat.schemas import ChatSchema, MessageSchema, Notification
 from fastapi import APIRouter, Depends, Response, Request
 from core.config import REDIS_MESSAGE_CHANNEL
 from chat.message_token import MessageToken
-from repositories.services import Service
 from offer.models import Offer, Executor
 from sqlalchemy.orm import selectinload
-from auth.hasher import AuthDependency
+from auth.auth_utils import AuthDependency
 from core.redis import redis_session
 from auth.models import User
 from chat.models import Chat
@@ -21,8 +20,8 @@ chat_api = APIRouter(prefix='/api/v1')
 async def create_chat(
         _chat: ChatSchema,
         user: User = Depends(AuthDependency()),
-        _executor_service: Service = Depends(executor_service),
-        _chat_service: Service = Depends(chat_service)
+        _executor_service: BaseService = Depends(executor_service),
+        _chat_service: BaseService = Depends(chat_service)
 ):
     executor = await _executor_service.get_with_options(
         selectinload(Executor.offer),
@@ -47,7 +46,7 @@ async def create_chat(
 async def delete_chat(
         chat_id: str,
         user: User = Depends(AuthDependency()),
-        _chat_service: Service = Depends(chat_service)
+        _chat_service: BaseService = Depends(chat_service)
 ):
     chat = await _chat_service.get_with_options(selectinload(Chat.offer), Chat.id == chat_id)
     if not chat:
@@ -64,8 +63,8 @@ async def post_message(
         chat_id: str,
         _message: MessageSchema,
         user: User = Depends(AuthDependency()),
-        _chat_service: Service = Depends(chat_service),
-        _message_service: Service = Depends(message_service),
+        _chat_service: BaseService = Depends(chat_service),
+        _message_service: BaseService = Depends(message_service),
         redis: Redis = Depends(redis_session)
 ):
     chat = await _chat_service.get_with_options(
@@ -91,6 +90,18 @@ async def post_message(
         str(redis_message),
     )
     return message
+
+
+@chat_api.get('/chats')
+async def get_user_chats(
+       user: User = Depends(AuthDependency()),
+       _chat_service: BaseService = Depends(chat_service),
+):
+    chats = await _chat_service.select_with_options(
+        [selectinload(Chat.offer)],
+        Chat.executor_id == user.id | Chat.offer.user_id == user.id
+    )
+    return chats
 
 
 @chat_api.get('/notification/token')

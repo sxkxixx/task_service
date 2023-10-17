@@ -1,10 +1,9 @@
 from offer.schemas import OfferSchema, OfferUpdate, FileSchema, OfferPublic, OfferPrivate
-from repositories.dependencies import offer_service, executor_service, file_service, category_service, \
-    offer_type_service
-from repositories.services import Service
+from dao import offer_service, executor_service, file_service, category_service, \
+    offer_type_service, BaseService
 from offer.models import Offer, FileOffer, Executor
 from sqlalchemy.orm import selectinload
-from auth.hasher import AuthDependency
+from auth.auth_utils import AuthDependency
 from fastapi import Depends, Response
 from fastapi import APIRouter
 from auth.models import User
@@ -14,8 +13,8 @@ offers_api = APIRouter(prefix='/api/v1')
 
 @offers_api.get('/init_app', tags=['OFFER'])
 async def app_init_route(
-        _category_service: Service = Depends(category_service),
-        _offer_type_service: Service = Depends(offer_type_service)
+        _category_service: BaseService = Depends(category_service),
+        _offer_type_service: BaseService = Depends(offer_type_service)
 ):
     categories = await _category_service.select()
     types = await _offer_type_service.select()
@@ -25,12 +24,12 @@ async def app_init_route(
 @offers_api.post('/offer/create', tags=['OFFER'])
 async def create_offer(
         _offer: OfferSchema,
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
         user: User = Depends(AuthDependency()),
 ):
     if not user.is_verified:
         return Response('User has to be verified', status_code=400)
-    offer = await _offer_service.add(user_id=user.id, **_offer.model_dump())
+    offer = await _offer_service.add_offer(user_id=user.id, **_offer.model_dump())
     return offer
 
 
@@ -38,7 +37,7 @@ async def create_offer(
 async def get_private_offer(
         offer_id: str,
         user: User = Depends(AuthDependency()),
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
 ):
     """Returns private Offer view"""
     offer = await _offer_service.get_with_options(
@@ -58,7 +57,7 @@ async def get_private_offer(
 @offers_api.get('/offer/public/{offer_id}', tags=['OFFER'])
 async def get_public_offer(
         offer_id: str,
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
 ):
     """Returns public Offer view"""
     _offer: Offer = await _offer_service.get_with_options(
@@ -74,7 +73,7 @@ async def get_public_offer(
 async def get_offers(
         type_id: str = None,
         category_id: str = None,
-        _offer_service: Service = Depends(offer_service)
+        _offer_service: BaseService = Depends(offer_service)
 ):
     filters = []
     if type_id:
@@ -88,7 +87,7 @@ async def get_offers(
 @offers_api.get('/offers/profile', tags=['OFFER'])
 async def get_user_offers(
         _type_id: str = None,
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
         user: User = Depends(AuthDependency())
 ):
     # TODO: Возвращает Offers, которые создал USER
@@ -101,7 +100,7 @@ async def get_user_offers(
 @offers_api.get('/offers/responses', tags=['OFFER'])
 async def get_user_response_offers(
         _type_id: str = None,
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
         user: User = Depends(AuthDependency())
 ):
     # TODO: "Отклики" User'a
@@ -118,7 +117,7 @@ async def get_user_response_offers(
 async def update_offer(
         offer_id: str,
         _offer_schema: OfferUpdate,
-        _offer_service: Service = Depends(offer_service),
+        _offer_service: BaseService = Depends(offer_service),
         user: User = Depends(AuthDependency())
 ):
     offer = await _offer_service.update(Offer.id == offer_id, Offer.user_id == user.id, **_offer_schema.model_dump())
@@ -131,7 +130,7 @@ async def update_offer(
 async def delete_offer(
         offer_id: str,
         user: User = Depends(AuthDependency()),
-        _offer_service: Service = Depends(offer_service)
+        _offer_service: BaseService = Depends(offer_service)
 ):
     offer = await _offer_service.get(Offer.id == offer_id)
     if not offer:
@@ -147,8 +146,8 @@ async def create_file(
         offer_id: str,
         _file: FileSchema,
         user: User = Depends(AuthDependency()),
-        _offer_service: Service = Depends(offer_service),
-        _file_service: Service = Depends(file_service),
+        _offer_service: BaseService = Depends(offer_service),
+        _file_service: BaseService = Depends(file_service),
 ):
     offer = await _offer_service.get(Offer.id == offer_id)
     if not offer:
@@ -164,7 +163,7 @@ async def update_file(
         file_id: str,
         _file: FileSchema,
         user: User = Depends(AuthDependency()),
-        _file_service: Service = Depends(file_service),
+        _file_service: BaseService = Depends(file_service),
 ):
     file: FileOffer = await _file_service.get_with_options([selectinload(FileOffer.offer)], FileOffer.id == file_id)
     if not file:
@@ -180,7 +179,7 @@ async def update_file(
 async def delete_file(
         file_id: str,
         user: User = Depends(AuthDependency()),
-        _file_service: Service = Depends(file_service),
+        _file_service: BaseService = Depends(file_service),
 ):
     file: FileOffer = await _file_service.get_with_options([selectinload(FileOffer.offer)], FileOffer.id == file_id)
     if not file:
@@ -196,8 +195,8 @@ async def delete_file(
 async def become_executor(
         offer_id: str,
         user: User = Depends(AuthDependency()),
-        _executor_service: Service = Depends(executor_service),
-        _offer_service: Service = Depends(offer_service)
+        _executor_service: BaseService = Depends(executor_service),
+        _offer_service: BaseService = Depends(offer_service)
 ):
     if not user.is_verified:
         return Response('User has to be verified', status_code=400)
@@ -215,7 +214,7 @@ async def delete_executor(
         offer_id: str,
         executor_id: str,
         user: User = Depends(AuthDependency()),
-        _executor_service: Service = Depends(executor_service),
+        _executor_service: BaseService = Depends(executor_service),
 ):
     """User can stop being executor itself + Offer owner can delete executor"""
     executor = await _executor_service.get_with_options(

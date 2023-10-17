@@ -41,15 +41,15 @@ class S3Service:
         return response
 
     @classmethod
-    async def change_files(self, previous_file_name: str, current_file: UploadFile = File(...)):
-        async with self.__session.client(self.__service_name, endpoint_url=self.__endpoint_url) as client:
+    async def change_files(cls, previous_file_name: str, current_file: UploadFile = File(...)):
+        async with cls.__session.client(cls.__service_name, endpoint_url=cls.__endpoint_url) as client:
             await client.delete_object(Bucket=BUCKET_NAME, Key=previous_file_name)
-            unique_filename = self.__generate_unique_filename(current_file.filename)
+            unique_filename = cls.__generate_unique_filename(current_file.filename)
             await client.upload_fileobj(current_file, BUCKET_NAME, unique_filename)
         return unique_filename
 
     async def __get_client_session(self):
-        # TODO: Хуй знает, не работает
+        # Does not works!
         async with self.__session.client(self.__service_name, endpoint_url=self.__endpoint_url) as client:
             print(type(client))
             yield client

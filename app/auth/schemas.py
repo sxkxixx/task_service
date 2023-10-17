@@ -33,11 +33,6 @@ class UserCreateSchema(BaseModel):
         return field.strip().lower()
 
 
-class Error(BaseModel):
-    field_name: str
-    exception: str
-
-
 class RefreshSessionSchema(BaseModel):
     user_id: str
     user_agent: str
@@ -70,3 +65,21 @@ class PersonalDataSchema(BaseModel):
         if not field.startswith('@'):
             return ValueError(f'{info.field_name} must be starts with a "@"')
         return field
+
+
+class PasswordUpdateSchema(BaseModel):
+    previous_password: str = 'Предыдущий пароль'
+    current_password: str = 'Новый пароль'
+
+    @classmethod
+    @field_validator('current_password', 'previous_password')
+    def validate_length(cls, field: str, info: FieldValidationInfo) -> str:
+        if field in ['Предыдущий пароль', 'Новый пароль']:
+            raise ValueError(f'{info.field_name} must\'be different from example value')
+        if len(field) < 8:
+            raise ValueError(f'{info.field_name} length must be at least 8 characters')
+        return field
+
+
+class VerifyTokenSchema(BaseModel):
+    verify_token: str

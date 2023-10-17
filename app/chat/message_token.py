@@ -1,7 +1,7 @@
 from auth.models import User
 from core.redis import RedisService
 from core.config import MESSAGE_TOKEN_KEY, MESSAGE_TOKEN_TTL_SECONDS
-from repositories.dependencies import user_service
+from dao.dependencies import user_service
 from uuid import uuid4
 
 

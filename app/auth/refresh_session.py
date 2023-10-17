@@ -1,4 +1,5 @@
 from core.config import REFRESH_TOKEN_TTL_DAYS, REFRESH_SESSION_KEY
+from fastapi import HTTPException
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 from core.redis import RedisService
@@ -55,9 +56,23 @@ class RefreshSession(RedisService):
         return self.__user_id
 
     @classmethod
-    async def get(cls, refresh_session_id: str):
+    async def get(cls, refresh_session_id: str, user_agent: str):
         rs_json = await cls.redis.get(f'{REFRESH_SESSION_KEY}_{refresh_session_id}')
         if rs_json is None:
-            return None
-        refresh_session = json.loads(rs_json)
-        return cls(**refresh_session)
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    'status': 'error',
+                    'detail': 'Refresh Session has expired'
+                }
+            )
+        refresh_session = cls(**json.loads(rs_json))
+        if refresh_session.ua != user_agent:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    'status': 'error',
+                    'detail': 'Incorrect User-Agent'
+                }
+            )
+        return refresh_session
